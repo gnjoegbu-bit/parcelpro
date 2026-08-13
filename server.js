@@ -248,60 +248,38 @@ function ensureAdminAccount(callback) {
     });
 }
 
-// ========================================
-// CREATE DATABASE TABLES
-// ========================================
-
 function ensureConversationTables(callback) {
 
     const conversationsSql = `
-
         CREATE TABLE IF NOT EXISTS conversations (
-
             id INT NOT NULL AUTO_INCREMENT,
-
             customer_email VARCHAR(255) NOT NULL,
-
             customer_name VARCHAR(100) NOT NULL,
-
             created_at TIMESTAMP NOT NULL
                 DEFAULT CURRENT_TIMESTAMP,
-
             updated_at TIMESTAMP NOT NULL
                 DEFAULT CURRENT_TIMESTAMP
                 ON UPDATE CURRENT_TIMESTAMP,
-
             PRIMARY KEY (id),
-
             UNIQUE KEY unique_customer_email
                 (customer_email)
-
         )
-
         ENGINE=InnoDB
         DEFAULT CHARSET=utf8mb4
-
     `;
 
 
     const messagesSql = `
-
         CREATE TABLE IF NOT EXISTS conversation_messages (
-
             id INT NOT NULL AUTO_INCREMENT,
-
             conversation_id INT NOT NULL,
-
             sender ENUM(
                 'customer',
                 'admin'
             ) NOT NULL,
-
             message TEXT NOT NULL,
-
             created_at TIMESTAMP NOT NULL
                 DEFAULT CURRENT_TIMESTAMP,
-
             PRIMARY KEY (id),
 
             KEY conversation_messages_conversation_id
@@ -312,54 +290,32 @@ function ensureConversationTables(callback) {
             ),
 
             CONSTRAINT fk_conversation_messages_conversation
-
                 FOREIGN KEY (conversation_id)
-
                 REFERENCES conversations(id)
-
                 ON DELETE CASCADE
-
         )
-
         ENGINE=InnoDB
         DEFAULT CHARSET=utf8mb4
-
     `;
 
-
-    // ========================================
-    // CUSTOMER PRESENCE TABLE
-    // ========================================
 
     const presenceSql = `
-
         CREATE TABLE IF NOT EXISTS customer_presence (
-
             id INT NOT NULL AUTO_INCREMENT,
-
             customer_email VARCHAR(255) NOT NULL,
-
             customer_name VARCHAR(100) NOT NULL,
-
             is_online BOOLEAN NOT NULL DEFAULT FALSE,
-
             login_at DATETIME NULL,
-
             last_seen DATETIME NULL,
-
             logout_at DATETIME NULL,
-
             PRIMARY KEY (id),
-
             UNIQUE KEY unique_presence_email
                 (customer_email)
-
         )
-
         ENGINE=InnoDB
         DEFAULT CHARSET=utf8mb4
-
     `;
+
 
     const presenceSessionsSql = `
         CREATE TABLE IF NOT EXISTS presence_sessions (
@@ -371,10 +327,15 @@ function ensureConversationTables(callback) {
             last_seen DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
-            UNIQUE KEY unique_presence_session (principal_type, principal_id, session_id),
-            KEY presence_sessions_activity (principal_type, principal_id, last_seen)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            UNIQUE KEY unique_presence_session
+                (principal_type, principal_id, session_id),
+            KEY presence_sessions_activity
+                (principal_type, principal_id, last_seen)
+        )
+        ENGINE=InnoDB
+        DEFAULT CHARSET=utf8mb4
     `;
+
 
     const attachmentsSql = `
         CREATE TABLE IF NOT EXISTS conversation_attachments (
@@ -384,90 +345,123 @@ function ensureConversationTables(callback) {
             image_mime VARCHAR(50) NOT NULL,
             original_name VARCHAR(180) NULL,
             file_size INT UNSIGNED NOT NULL,
-            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            created_at TIMESTAMP NOT NULL
+                DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
-            UNIQUE KEY unique_attachment_message (message_id),
-            CONSTRAINT fk_conversation_attachments_message FOREIGN KEY (message_id)
-                REFERENCES conversation_messages(id) ON DELETE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+
+            UNIQUE KEY unique_attachment_message
+                (message_id),
+
+            CONSTRAINT fk_conversation_attachments_message
+                FOREIGN KEY (message_id)
+                REFERENCES conversation_messages(id)
+                ON DELETE CASCADE
+        )
+        ENGINE=InnoDB
+        DEFAULT CHARSET=utf8mb4
     `;
 
 
-    db.query(
-        conversationsSql,
-        err => {
+    // ========================================
+    // SHIPMENTS TABLE
+    // ========================================
 
-            if (err) {
+    const shipmentsSql = `
+        CREATE TABLE IF NOT EXISTS shipments (
+            id INT NOT NULL AUTO_INCREMENT,
+            tracking_number VARCHAR(100) NOT NULL,
+            customer_name VARCHAR(255) NOT NULL,
+            destination VARCHAR(255) NOT NULL,
+            status VARCHAR(100) NOT NULL,
+            created_at TIMESTAMP NOT NULL
+                DEFAULT CURRENT_TIMESTAMP,
 
-                console.error(
-                    "Conversation table setup failed:",
-                    err
-                );
+            PRIMARY KEY (id),
 
-                return callback();
-
-            }
-
-
-            db.query(
-                messagesSql,
-                messageErr => {
-
-                    if (messageErr) {
-
-                        console.error(
-                            "Conversation messages table setup failed:",
-                            messageErr
-                        );
-
-                        return callback();
-
-                    }
+            UNIQUE KEY unique_tracking_number
+                (tracking_number)
+        )
+        ENGINE=InnoDB
+        DEFAULT CHARSET=utf8mb4
+    `;
 
 
-                    db.query(
-                        presenceSql,
-                        presenceErr => {
+    const tables = [
+        {
+            name: "Conversations table",
+            sql: conversationsSql
+        },
+        {
+            name: "Conversation messages table",
+            sql: messagesSql
+        },
+        {
+            name: "Customer presence table",
+            sql: presenceSql
+        },
+        {
+            name: "Presence sessions table",
+            sql: presenceSessionsSql
+        },
+        {
+            name: "Conversation attachments table",
+            sql: attachmentsSql
+        },
+        {
+            name: "Shipments table",
+            sql: shipmentsSql
+        }
+    ];
 
-                            if (presenceErr) {
 
-                                console.error(
-                                    "Customer presence table setup failed:",
-                                    presenceErr
-                                );
+    function createNextTable(index) {
 
-                            } else {
+        if (index >= tables.length) {
 
-                                console.log(
-                                    "Customer presence table ready!"
-                                );
-
-                            }
-
-                            db.query(presenceSessionsSql, sessionErr => {
-                                if (sessionErr) {
-                                    console.error("Presence sessions table setup failed:", sessionErr);
-                                } else {
-                                    console.log("Presence sessions table ready!");
-                                }
-                                db.query(attachmentsSql, attachmentErr => {
-                                    if (attachmentErr) console.error("Conversation attachment table setup failed:", attachmentErr);
-                                    else console.log("Conversation attachment table ready!");
-                                    callback();
-                                });
-                            });
-
-                        }
-                    );
-
-                }
+            console.log(
+                "All database tables are ready!"
             );
 
+            return callback();
         }
-    );
+
+
+        const table = tables[index];
+
+
+        db.query(
+            table.sql,
+            err => {
+
+                if (err) {
+
+                    console.error(
+                        table.name + " setup failed:",
+                        err
+                    );
+
+                    return callback(err);
+                }
+
+
+                console.log(
+                    table.name + " ready!"
+                );
+
+
+                createNextTable(
+                    index + 1
+                );
+
+            }
+        );
+
+    }
+
+
+    createNextTable(0);
 
 }
-
 
 // ========================================
 // CREATE OR GET CONVERSATION
