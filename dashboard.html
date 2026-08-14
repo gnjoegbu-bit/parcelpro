@@ -1308,17 +1308,31 @@ card.innerHTML = `
                             }
                         </strong>
 
-                        <p>
-                            ${escapeHTML(
-                                message.message
-                            )}
-                        </p>
+                        ${message.message ? `
+<p>
+    ${escapeHTML(message.message)}
+</p>
+` : ""}
 
-                        <small>
-                            ${formatDate(
-                                message.created_at
-                            )}
-                        </small>
+${message.image_url ? `
+<img
+    src="${message.image_url}"
+    alt="Attached image"
+    style="
+        max-width: 250px;
+        width: 100%;
+        display: block;
+        margin-top: 10px;
+        border-radius: 10px;
+    "
+>
+` : ""}
+
+<small>
+    ${formatDate(
+        message.created_at
+    )}
+</small>
 
                     `;
 
