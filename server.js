@@ -3389,6 +3389,7 @@ if (
 
             const allowedStatuses = [
                 "Pending",
+                "Preparing",
                 "Picked Up",
                 "In Transit",
                 "Out for Delivery",

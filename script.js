@@ -2992,47 +2992,175 @@ function setupShipmentForm() {
 // DASHBOARD SECTION SWITCHING
 // ========================================
 
-function setupDashboardNavigation() {
-
-    const messagesLink =
-        document.getElementById(
-            "messagesLink"
-        );
-
-    const shipmentsSection =
-        document.getElementById(
-            "shipmentsSection"
-        );
-
-    const messagesSection =
-        document.getElementById(
-            "messagesSection"
-        );
-
-    if (
-        messagesLink &&
-        messagesSection &&
-        shipmentsSection
-    ) {
-
-        messagesLink.addEventListener(
-            "click",
-            event => {
-
-                event.preventDefault();
-
-                shipmentsSection.style.display =
-                    "none";
-
-                messagesSection.style.display =
-                    "block";
-
-                loadAdminConversations();
-
-            }
-        );
-
+function formatAdminDate(value) {
+    if (!value) {
+        return "N/A";
     }
+
+    const date = new Date(value);
+
+    return Number.isNaN(date.getTime())
+        ? String(value)
+        : date.toLocaleString();
+}
+
+async function loadAdminCustomerPresence() {
+    const container = document.getElementById(
+        "customerPresenceContainer"
+    );
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = "<p>Loading customer status...</p>";
+
+    try {
+        const response = await fetch(
+            "/customer-presence",
+            { cache: "no-store" }
+        );
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(
+                data.message || "Unable to load customer status."
+            );
+        }
+
+        const customers = data.customers || [];
+
+        if (customers.length === 0) {
+            container.innerHTML =
+                "<p>No customers have contacted support yet.</p>";
+            return;
+        }
+
+        container.innerHTML = "";
+
+        customers.forEach(customer => {
+            const online = Boolean(Number(customer.is_online));
+            const card = document.createElement("div");
+            card.className = "presence-card";
+            card.innerHTML = `
+                <div class="presence-card-header">
+                    <div class="presence-customer">
+                        <div class="presence-avatar">
+                            ${escapeHTML(
+                                (customer.customer_name || "C")
+                                    .trim()
+                                    .charAt(0)
+                                    .toUpperCase()
+                            )}
+                        </div>
+                        <div class="presence-customer-info">
+                            <strong>${escapeHTML(customer.customer_name)}</strong>
+                            <small>${escapeHTML(customer.customer_email)}</small>
+                        </div>
+                    </div>
+                    <div class="presence-status">
+                        <span class="status-dot ${online ? "online" : "offline"}"></span>
+                        <span>${online ? "Online" : "Offline"}</span>
+                    </div>
+                </div>
+                <div class="presence-details">
+                    <div class="presence-detail">
+                        <span>🕒 Login</span>
+                        <strong>${escapeHTML(formatAdminDate(customer.login_at))}</strong>
+                    </div>
+                    <div class="presence-detail">
+                        <span>👁 Last seen</span>
+                        <strong>${escapeHTML(formatAdminDate(customer.last_seen))}</strong>
+                    </div>
+                    <div class="presence-detail">
+                        <span>↪ Logout</span>
+                        <strong>${escapeHTML(formatAdminDate(customer.logout_at))}</strong>
+                    </div>
+                </div>
+            `;
+
+            container.appendChild(card);
+        });
+    } catch (error) {
+        console.error("Customer presence error:", error);
+        container.innerHTML =
+            "<p>❌ Unable to load customer status.</p>";
+    }
+}
+
+function setupDashboardNavigation() {
+    const links = {
+        dashboard: document.getElementById("dashboardLink"),
+        shipments: document.getElementById("shipmentsLink"),
+        customers: document.getElementById("customersLink"),
+        messages: document.getElementById("messagesLink"),
+        settings: document.getElementById("settingsLink")
+    };
+    const sections = {
+        shipments: document.getElementById("shipmentsSection"),
+        customers: document.getElementById("customersSection"),
+        messages: document.getElementById("messagesSection"),
+        settings: document.getElementById("settingsSection")
+    };
+
+    if (!sections.shipments || sections.shipments.dataset.navigationReady) {
+        return;
+    }
+
+    sections.shipments.dataset.navigationReady = "true";
+
+    const showSection = sectionName => {
+        Object.entries(sections).forEach(([name, section]) => {
+            if (section) {
+                section.style.display = name === sectionName
+                    ? "block"
+                    : "none";
+            }
+        });
+    };
+
+    const bindLink = (link, sectionName, onOpen) => {
+        if (!link) {
+            return;
+        }
+
+        link.addEventListener("click", event => {
+            event.preventDefault();
+            showSection(sectionName);
+
+            if (onOpen) {
+                onOpen();
+            }
+        });
+    };
+
+    bindLink(links.dashboard, "shipments", () => {
+        loadDashboardStats();
+        loadShipments();
+    });
+    bindLink(links.shipments, "shipments", loadShipments);
+    bindLink(
+        links.customers,
+        "customers",
+        loadAdminCustomerPresence
+    );
+    bindLink(
+        links.messages,
+        "messages",
+        loadAdminConversations
+    );
+    bindLink(links.settings, "settings");
+
+    setInterval(() => {
+        loadDashboardStats();
+
+        if (
+            sections.customers &&
+            sections.customers.style.display !== "none"
+        ) {
+            loadAdminCustomerPresence();
+        }
+    }, 5000);
 
 }
 
