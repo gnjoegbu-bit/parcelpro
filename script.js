@@ -3423,6 +3423,9 @@ async function openAdminConversation(
     currentAdminCustomerEmail =
         email;
 
+    conversationView.dataset.email =
+        email;
+
     listView.style.display =
         "none";
 
@@ -3643,6 +3646,8 @@ function setupBackToConversations() {
 
             currentAdminCustomerEmail =
                 "";
+
+            delete conversationView.dataset.email;
 
             conversationView.style.display =
                 "none";
@@ -4052,12 +4057,43 @@ function setupAdminReplyForm() {
         const image =
             selectedImages.admin;
 
+        const conversationView =
+            document.getElementById("conversationView");
+
+        const conversationSubtitle =
+            document.getElementById("conversationSubtitle");
+
+        const customerEmailCandidates = [
+            currentAdminCustomerEmail,
+            conversationView?.dataset.email,
+            conversationSubtitle?.textContent
+        ];
+
+        const activeCustomerEmail =
+            customerEmailCandidates
+                .map(value => String(value || "").trim().toLowerCase())
+                .find(value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) || "";
+
         // Must have either text or an image
         if (
-            !currentAdminCustomerEmail ||
+            !activeCustomerEmail ||
             (!message && !image)
         ) {
+            if (!activeCustomerEmail) {
+                alert(
+                    "Unable to identify the customer email. Please reopen the conversation and try again."
+                );
+            }
+
             return;
+        }
+
+        currentAdminCustomerEmail =
+            activeCustomerEmail;
+
+        if (conversationView) {
+            conversationView.dataset.email =
+                activeCustomerEmail;
         }
 
         try {
@@ -4070,7 +4106,7 @@ function setupAdminReplyForm() {
 
                 await sendConversationImage(
                     "admin",
-                    currentAdminCustomerEmail,
+                    activeCustomerEmail,
                     "ParcelPro Support",
                     message,
                     image
@@ -4108,7 +4144,7 @@ function setupAdminReplyForm() {
                     await fetch(
                         "/conversations/" +
                         encodeURIComponent(
-                            currentAdminCustomerEmail
+                            activeCustomerEmail
                         ) +
                         "/reply",
                         {
@@ -4147,7 +4183,7 @@ function setupAdminReplyForm() {
 
             // Reload conversation
             await loadAdminConversation(
-                currentAdminCustomerEmail
+                activeCustomerEmail
             );
 
         }
