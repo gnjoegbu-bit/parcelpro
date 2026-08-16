@@ -64,7 +64,7 @@ db.connect(err => {
 // JSON RESPONSE
 // ========================================
 
-function sendJSON(res, statusCode, data) {
+function sendJSON(res, statusCode, data, headers = {}) {
 
     res.writeHead(statusCode, {
 
@@ -72,7 +72,9 @@ function sendJSON(res, statusCode, data) {
             "application/json; charset=utf-8",
 
         "Cache-Control":
-            "no-cache, no-store, must-revalidate"
+            "no-cache, no-store, must-revalidate",
+
+        ...headers
 
     });
 
@@ -984,6 +986,125 @@ function verifyAdminSession(sessionId, token, callback) {
     );
 }
 
+// ========================================
+// ADMIN COOKIE AUTHENTICATION
+// ========================================
+
+function getAdminCookieSession(req) {
+    const cookieHeader = req.headers.cookie || "";
+
+    const cookies = {};
+
+    cookieHeader.split(";").forEach(cookie => {
+        const separatorIndex = cookie.indexOf("=");
+
+        if (separatorIndex === -1) {
+            return;
+        }
+
+        const name = cookie
+            .slice(0, separatorIndex)
+            .trim();
+
+        const value = cookie
+            .slice(separatorIndex + 1)
+            .trim();
+
+        try {
+            cookies[name] = decodeURIComponent(value);
+        } catch {
+            cookies[name] = "";
+        }
+    });
+
+    return {
+        sessionId:
+            cookies.parcelProAdminSessionId || "",
+
+        token:
+            cookies.parcelProAdminToken || ""
+    };
+}
+
+function requireAdminSession(req, res, callback, options = {}) {
+    const auth =
+        getAdminCookieSession(req);
+
+    verifyAdminSession(
+        auth.sessionId,
+        auth.token,
+        (err, valid) => {
+
+            if (err || !valid) {
+                if (options.redirectTo) {
+                    res.writeHead(302, {
+                        "Location": options.redirectTo,
+                        "Cache-Control": "no-cache, no-store, must-revalidate"
+                    });
+
+                    return res.end();
+                }
+
+                return sendJSON(
+                    res,
+                    401,
+                    {
+                        success: false,
+                        message:
+                            "Unauthorized. Admin login required."
+                    }
+                );
+            }
+
+            callback(auth);
+        }
+    );
+}
+
+// ========================================
+// ADMIN API ROUTE PROTECTION
+// ========================================
+
+function isAdminApiRoute(req, urlPath) {
+
+    if (
+        req.method === "GET" &&
+        (
+            urlPath === "/customer-presence" ||
+            urlPath === "/dashboard-stats" ||
+            urlPath === "/shipments" ||
+            urlPath === "/messages" ||
+            urlPath === "/conversations" ||
+            urlPath.startsWith("/conversations/") ||
+            urlPath === "/admin-account"
+        )
+    ) {
+        return true;
+    }
+
+    if (
+        req.method === "POST" &&
+        (
+            urlPath === "/add-shipment" ||
+            urlPath === "/update-shipment-status" ||
+            urlPath === "/admin-account/update" ||
+            urlPath === "/presence/admin/heartbeat" ||
+            urlPath === "/presence/admin/disconnect"
+        )
+    ) {
+        return true;
+    }
+
+    if (
+        req.method === "POST" &&
+        urlPath.startsWith("/conversations/") &&
+        urlPath.endsWith("/reply")
+    ) {
+        return true;
+    }
+
+    return false;
+}
 
 // ========================================
 // CREATE SERVER
@@ -994,6 +1115,12 @@ const server = http.createServer(
 
         const requestUrl = new URL(req.url, "http://localhost:3000");
         const urlPath = requestUrl.pathname;
+
+        // ========================================
+        // PROCESS NORMAL REQUESTS
+        // ========================================
+
+        const processRequest = () => {
 
         // Server-sent events keep the UI current without polling for status.
         if (req.method === "GET" && urlPath === "/presence/events") {
@@ -1071,10 +1198,20 @@ const server = http.createServer(
 
                         publishSupportPresence();
 
-                        sendJSON(res, 200, {
-                            success: true,
-                            presenceToken: token
-                        });
+                        sendJSON(
+                            res,
+                            200,
+                            {
+                                success: true,
+                                presenceToken: token
+                            },
+                            {
+                                "Set-Cookie": [
+                                    `parcelProAdminSessionId=${encodeURIComponent(sessionId)}; HttpOnly; SameSite=Strict; Path=/`,
+                                    `parcelProAdminToken=${encodeURIComponent(token)}; HttpOnly; SameSite=Strict; Path=/`
+                                ]
+                            }
+                        );
                     }
                 );
             }
@@ -1399,7 +1536,25 @@ const server = http.createServer(
                 verifyAdminSession(data.sessionId, data.token, (err, valid) => {
                     if (err || !valid) return sendJSON(res, 401, { success: false, message: "Unauthorized presence update." });
                     const sql = urlPath.endsWith("disconnect") ? "DELETE FROM presence_sessions WHERE principal_type = 'admin' AND principal_id = 'support' AND session_id = ?" : "UPDATE presence_sessions SET last_seen = NOW() WHERE principal_type = 'admin' AND principal_id = 'support' AND session_id = ?";
-                    db.query(sql, [data.sessionId], queryErr => { if (!queryErr) publishSupportPresence(); sendJSON(res, queryErr ? 500 : 200, { success: !queryErr }); });
+                    db.query(sql, [data.sessionId], queryErr => {
+                        if (!queryErr) publishSupportPresence();
+
+                        const headers = urlPath.endsWith("disconnect")
+                            ? {
+                                "Set-Cookie": [
+                                    "parcelProAdminSessionId=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0",
+                                    "parcelProAdminToken=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0"
+                                ]
+                            }
+                            : {};
+
+                        sendJSON(
+                            res,
+                            queryErr ? 500 : 200,
+                            { success: !queryErr },
+                            headers
+                        );
+                    });
                 });
             });
         }
@@ -3555,6 +3710,65 @@ if (
 
         }
 
+        // ========================================
+        // PROTECT ADMIN DASHBOARD PAGE
+        // ========================================
+
+        if (
+            req.method === "GET" &&
+            urlPath === "/dashboard.html"
+        ) {
+            return requireAdminSession(
+                req,
+                res,
+                () => {
+                    const dashboardPath = path.join(
+                        __dirname,
+                        "dashboard.html"
+                    );
+
+                    fs.readFile(
+                        dashboardPath,
+                        "utf8",
+                        (err, dashboardHTML) => {
+
+                            if (err) {
+                                console.error(
+                                    "Dashboard file error:",
+                                    err
+                                );
+
+                                return sendJSON(
+                                    res,
+                                    500,
+                                    {
+                                        success: false,
+                                        message:
+                                            "Unable to load dashboard."
+                                    }
+                                );
+                            }
+
+                            res.writeHead(
+                                200,
+                                {
+                                    "Content-Type":
+                                        "text/html; charset=utf-8",
+
+                                    "Cache-Control":
+                                        "no-cache, no-store, must-revalidate"
+                                }
+                            );
+
+                            res.end(
+                                dashboardHTML
+                            );
+                        }
+                    );
+                },
+                { redirectTo: "/login.html" }
+            );
+        }
 
         // ========================================
         // SERVE WEBSITE FILES
@@ -3661,8 +3875,30 @@ if (
             }
         );
 
+        }; // End request processing.
+
+        // ========================================
+        // ADMIN API AUTHENTICATION
+        // ========================================
+
+        if (isAdminApiRoute(req, urlPath)) {
+            return requireAdminSession(
+                req,
+                res,
+                () => {
+                    processRequest();
+                }
+            );
+        }
+
+        // ========================================
+        // PUBLIC REQUEST
+        // ========================================
+
+        return processRequest();
     }
 );
+
 /////////////////////
 ///START SERVER/////
 ///////////////////

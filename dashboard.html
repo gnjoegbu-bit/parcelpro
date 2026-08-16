@@ -463,47 +463,10 @@
 
 
 <!-- ========================================
-     LOGIN CHECK
-======================================== -->
-
-<script>
-
-    if (
-        localStorage.getItem("isLoggedIn")
-        !== "true"
-    ) {
-
-        window.location.href =
-            "login.html";
-
-    }
-
-</script>
-
-
-
-<!-- ========================================
      DASHBOARD JAVASCRIPT
 ======================================== -->
 
 <script>
-
-    // ========================================
-    // LOGOUT
-    // ========================================
-
-    function logout() {
-
-        localStorage.removeItem(
-            "isLoggedIn"
-        );
-
-        window.location.href =
-            "login.html";
-
-    }
-
-
 
     // ========================================
     // SECTION ELEMENTS
