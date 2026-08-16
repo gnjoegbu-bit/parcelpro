@@ -3438,3 +3438,49 @@ a:focus-visible {
     }
 
 }
+
+.message-delete-button,
+.admin-message-delete-button,
+.conversation-delete-button {
+    border: 1px solid rgba(248, 113, 113, .45);
+    border-radius: 8px;
+    background: transparent;
+    color: #fca5a5;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 9px;
+}
+
+.message-delete-button,
+.admin-message-delete-button {
+    align-self: flex-end;
+    margin-top: 5px;
+}
+
+.message-delete-button:hover,
+.admin-message-delete-button:hover,
+.conversation-delete-button:hover {
+    background: rgba(220, 38, 38, .16);
+    border-color: #f87171;
+    color: #fecaca;
+}
+
+.support-conversation-row {
+    align-items: center;
+    display: flex;
+    gap: 10px;
+    width: 100%;
+}
+
+.support-conversation-row .support-conversation {
+    flex: 1;
+}
+
+.conversation-delete-button {
+    flex-shrink: 0;
+}
+
+.admin-message-bubble {
+    position: relative;
+}

@@ -748,6 +748,130 @@ function saveImageConversationMessage(sender, name, email, text, attachment, cal
     });
 }
 
+function verifyCustomerPresenceSession(email, sessionId, callback) {
+    if (!isValidEmail(email) || !sessionId) {
+        return callback(null, false);
+    }
+
+    db.query(
+        `SELECT id
+         FROM presence_sessions
+         WHERE principal_type = 'customer'
+           AND principal_id = ?
+           AND session_id = ?
+           AND last_seen >= DATE_SUB(NOW(), INTERVAL ${PRESENCE_TIMEOUT_SECONDS} SECOND)
+         LIMIT 1`,
+        [email, sessionId],
+        (err, rows) => callback(err, !err && rows.length > 0)
+    );
+}
+
+function removeConversationImageFiles(imageUrls) {
+    (imageUrls || []).forEach(imageUrl => {
+        const prefix = "/uploads/";
+        const value = String(imageUrl || "");
+
+        if (!value.startsWith(prefix)) {
+            return;
+        }
+
+        let fileName;
+
+        try {
+            fileName = decodeURIComponent(value.slice(prefix.length));
+        } catch {
+            return;
+        }
+
+        if (!fileName || fileName !== path.basename(fileName)) {
+            return;
+        }
+
+        fs.unlink(
+            path.join(uploadsDirectory, fileName),
+            err => {
+                if (err && err.code !== "ENOENT") {
+                    console.error("Conversation image cleanup error:", err);
+                }
+            }
+        );
+    });
+}
+
+function deleteConversationMessage(messageId, customerEmail, customerOnly, callback) {
+    const conditions = ["message.id = ?"];
+    const params = [messageId];
+
+    if (customerEmail) {
+        conditions.push("conversation.customer_email = ?");
+        params.push(customerEmail);
+    }
+
+    if (customerOnly) {
+        conditions.push("message.sender = 'customer'");
+    }
+
+    db.query(
+        `SELECT message.id, attachment.image_url
+         FROM conversation_messages message
+         INNER JOIN conversations conversation
+             ON conversation.id = message.conversation_id
+         LEFT JOIN conversation_attachments attachment
+             ON attachment.message_id = message.id
+         WHERE ${conditions.join(" AND ")}
+         LIMIT 1`,
+        params,
+        (lookupErr, rows) => {
+            if (lookupErr) return callback(lookupErr);
+            if (!rows.length) return callback(null, false);
+
+            db.query(
+                "DELETE FROM conversation_messages WHERE id = ?",
+                [messageId],
+                deleteErr => {
+                    if (deleteErr) return callback(deleteErr);
+
+                    removeConversationImageFiles(
+                        rows[0].image_url ? [rows[0].image_url] : []
+                    );
+                    callback(null, true);
+                }
+            );
+        }
+    );
+}
+
+function deleteEntireConversation(customerEmail, callback) {
+    db.query(
+        `SELECT attachment.image_url
+         FROM conversations conversation
+         INNER JOIN conversation_messages message
+             ON message.conversation_id = conversation.id
+         LEFT JOIN conversation_attachments attachment
+             ON attachment.message_id = message.id
+         WHERE conversation.customer_email = ?
+           AND attachment.image_url IS NOT NULL`,
+        [customerEmail],
+        (lookupErr, attachments) => {
+            if (lookupErr) return callback(lookupErr);
+
+            db.query(
+                "DELETE FROM conversations WHERE customer_email = ?",
+                [customerEmail],
+                (deleteErr, result) => {
+                    if (deleteErr) return callback(deleteErr);
+                    if (!result.affectedRows) return callback(null, false);
+
+                    removeConversationImageFiles(
+                        attachments.map(attachment => attachment.image_url)
+                    );
+                    callback(null, true);
+                }
+            );
+        }
+    );
+}
+
 // ========================================
 // CUSTOMER ONLINE
 // ========================================
@@ -1088,6 +1212,8 @@ function isAdminApiRoute(req, urlPath) {
             urlPath === "/add-shipment" ||
             urlPath === "/update-shipment-status" ||
             urlPath === "/admin-account/update" ||
+            urlPath === "/admin/messages/delete" ||
+            urlPath === "/admin/conversations/delete" ||
             urlPath === "/presence/admin/heartbeat" ||
             urlPath === "/presence/admin/disconnect"
         )
@@ -2489,6 +2615,187 @@ Message: ${message}
                     if (authErr || !valid) return sendJSON(res, 401, { success: false, message: "Unauthorized image upload." });
                     continueUpload();
                 });
+            });
+        }
+
+        if (
+            req.method === "POST" &&
+            urlPath === "/customer-conversation/delete-message"
+        ) {
+            return readRequestBody(req, body => {
+                let data;
+
+                try {
+                    data = JSON.parse(body);
+                } catch {
+                    return sendJSON(res, 400, {
+                        success: false,
+                        message: "Invalid delete request."
+                    });
+                }
+
+                const email = String(data.email || "").trim().toLowerCase();
+                const sessionId = String(data.sessionId || "").trim();
+                const messageId = Number(data.messageId);
+
+                if (
+                    !isValidEmail(email) ||
+                    !sessionId ||
+                    sessionId.length > 100 ||
+                    !Number.isSafeInteger(messageId) ||
+                    messageId < 1
+                ) {
+                    return sendJSON(res, 400, {
+                        success: false,
+                        message: "Valid message details are required."
+                    });
+                }
+
+                verifyCustomerPresenceSession(
+                    email,
+                    sessionId,
+                    (authErr, valid) => {
+                        if (authErr || !valid) {
+                            return sendJSON(res, 401, {
+                                success: false,
+                                message: "Your customer session has expired."
+                            });
+                        }
+
+                        deleteConversationMessage(
+                            messageId,
+                            email,
+                            true,
+                            (deleteErr, deleted) => {
+                                if (deleteErr) {
+                                    console.error(
+                                        "Customer message deletion error:",
+                                        deleteErr
+                                    );
+                                    return sendJSON(res, 500, {
+                                        success: false,
+                                        message: "Unable to delete message."
+                                    });
+                                }
+
+                                if (!deleted) {
+                                    return sendJSON(res, 404, {
+                                        success: false,
+                                        message: "Customer message not found."
+                                    });
+                                }
+
+                                sendJSON(res, 200, { success: true });
+                            }
+                        );
+                    }
+                );
+            });
+        }
+
+        if (
+            req.method === "POST" &&
+            urlPath === "/admin/messages/delete"
+        ) {
+            return readRequestBody(req, body => {
+                let data;
+
+                try {
+                    data = JSON.parse(body);
+                } catch {
+                    return sendJSON(res, 400, {
+                        success: false,
+                        message: "Invalid delete request."
+                    });
+                }
+
+                const messageId = Number(data.messageId);
+
+                if (!Number.isSafeInteger(messageId) || messageId < 1) {
+                    return sendJSON(res, 400, {
+                        success: false,
+                        message: "A valid message is required."
+                    });
+                }
+
+                deleteConversationMessage(
+                    messageId,
+                    "",
+                    false,
+                    (deleteErr, deleted) => {
+                        if (deleteErr) {
+                            console.error(
+                                "Admin message deletion error:",
+                                deleteErr
+                            );
+                            return sendJSON(res, 500, {
+                                success: false,
+                                message: "Unable to delete message."
+                            });
+                        }
+
+                        if (!deleted) {
+                            return sendJSON(res, 404, {
+                                success: false,
+                                message: "Message not found."
+                            });
+                        }
+
+                        sendJSON(res, 200, { success: true });
+                    }
+                );
+            });
+        }
+
+        if (
+            req.method === "POST" &&
+            urlPath === "/admin/conversations/delete"
+        ) {
+            return readRequestBody(req, body => {
+                let data;
+
+                try {
+                    data = JSON.parse(body);
+                } catch {
+                    return sendJSON(res, 400, {
+                        success: false,
+                        message: "Invalid delete request."
+                    });
+                }
+
+                const email = String(data.email || "").trim().toLowerCase();
+
+                if (!isValidEmail(email)) {
+                    return sendJSON(res, 400, {
+                        success: false,
+                        message: "A valid conversation is required."
+                    });
+                }
+
+                deleteEntireConversation(
+                    email,
+                    (deleteErr, deleted) => {
+                        if (deleteErr) {
+                            console.error(
+                                "Admin conversation deletion error:",
+                                deleteErr
+                            );
+                            return sendJSON(res, 500, {
+                                success: false,
+                                message: "Unable to delete conversation."
+                            });
+                        }
+
+                        if (!deleted) {
+                            return sendJSON(res, 404, {
+                                success: false,
+                                message: "Conversation not found."
+                            });
+                        }
+
+                        sendJSON(res, 200, { success: true });
+                    }
+                );
             });
         }
 

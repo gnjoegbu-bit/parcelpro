@@ -3178,6 +3178,68 @@ let currentAdminCustomerEmail = "";
 // LOAD CONVERSATION LIST
 // ========================================
 
+async function deleteAdminMessage(messageId) {
+    if (!messageId || !window.confirm("Delete this message or photo?")) {
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            "/admin/messages/delete",
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ messageId })
+            }
+        );
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || "Unable to delete message.");
+        }
+
+        if (currentAdminCustomerEmail) {
+            await loadAdminConversation(currentAdminCustomerEmail);
+        }
+    } catch (error) {
+        alert(error.message || "Unable to delete message.");
+    }
+}
+
+async function deleteAdminConversation(email) {
+    if (
+        !email ||
+        !window.confirm(
+            "Delete this entire conversation, including all messages and photos?"
+        )
+    ) {
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            "/admin/conversations/delete",
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email })
+            }
+        );
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(
+                data.message || "Unable to delete conversation."
+            );
+        }
+
+        currentAdminCustomerEmail = "";
+        await loadAdminConversations();
+    } catch (error) {
+        alert(error.message || "Unable to delete conversation.");
+    }
+}
+
 async function loadAdminConversations() {
 
     const container =
@@ -3322,9 +3384,24 @@ async function loadAdminConversations() {
                 }
             );
 
-            container.appendChild(
-                item
+            const row = document.createElement("div");
+            row.className = "support-conversation-row";
+
+            const deleteButton = document.createElement("button");
+            deleteButton.type = "button";
+            deleteButton.className = "conversation-delete-button";
+            deleteButton.textContent = "Delete";
+            deleteButton.setAttribute(
+                "aria-label",
+                `Delete conversation with ${conversation.customer_name}`
             );
+            deleteButton.addEventListener("click", event => {
+                event.stopPropagation();
+                deleteAdminConversation(conversation.customer_email);
+            });
+
+            row.append(item, deleteButton);
+            container.appendChild(row);
 
         }
 
@@ -3583,8 +3660,22 @@ async function loadAdminConversation(
                             )}
                         </small>
 
+                        <button
+                            type="button"
+                            class="admin-message-delete-button"
+                            data-message-id="${Number(message.id)}"
+                        >
+                            Delete
+                        </button>
+
                     </div>
                     `;
+
+                wrapper
+                    .querySelector(".admin-message-delete-button")
+                    ?.addEventListener("click", () => {
+                        deleteAdminMessage(Number(message.id));
+                    });
 
                 messagesContainer.appendChild(
                     wrapper
@@ -3955,7 +4046,51 @@ function setupMessageImageLightbox() {
     });
 }
 
-function addMessageToChat(sender, message, createdAt, scroll = true, imageUrl = "", imageName = "") {
+async function deleteCustomerChatMessage(messageId) {
+    if (!customerEmail || !messageId) {
+        return;
+    }
+
+    if (!window.confirm("Delete this message or photo?")) {
+        return;
+    }
+
+    try {
+        await sendCustomerHeartbeat();
+
+        const response = await fetch(
+            "/customer-conversation/delete-message",
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email: customerEmail,
+                    sessionId: getPresenceSessionId(),
+                    messageId
+                })
+            }
+        );
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || "Unable to delete message.");
+        }
+
+        await loadCustomerConversation();
+    } catch (error) {
+        alert(error.message || "Unable to delete message.");
+    }
+}
+
+function addMessageToChat(
+    sender,
+    message,
+    createdAt,
+    scroll = true,
+    imageUrl = "",
+    imageName = "",
+    messageId = 0
+) {
     const chatMessages = document.getElementById("chatMessages");
     if (!chatMessages || (!message && !imageUrl)) return;
     const wrapper = document.createElement("div");
@@ -3980,6 +4115,22 @@ function addMessageToChat(sender, message, createdAt, scroll = true, imageUrl = 
     time.className = "message-time";
     time.textContent = formatMessageTime(createdAt);
     content.append(bubble, time);
+
+    if (sender === "customer" && messageId) {
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.className = "message-delete-button";
+        deleteButton.textContent = "Delete";
+        deleteButton.setAttribute(
+            "aria-label",
+            imageUrl ? "Delete your photo" : "Delete your message"
+        );
+        deleteButton.addEventListener("click", () => {
+            deleteCustomerChatMessage(messageId);
+        });
+        content.appendChild(deleteButton);
+    }
+
     wrapper.append(avatar, content);
     chatMessages.appendChild(wrapper);
     if (scroll) scrollChatToBottom();
@@ -3990,7 +4141,15 @@ function displayConversationMessages(messages) {
     if (!chatMessages) return;
     const quickQuestions = document.getElementById("quickQuestions");
     chatMessages.innerHTML = "";
-    messages.forEach(message => addMessageToChat(message.sender, message.message, message.created_at, false, message.image_url, message.original_name));
+    messages.forEach(message => addMessageToChat(
+        message.sender,
+        message.message,
+        message.created_at,
+        false,
+        message.image_url,
+        message.original_name,
+        Number(message.id || 0)
+    ));
     if (quickQuestions) chatMessages.appendChild(quickQuestions);
     if (messages.length) lastMessageId = Number(messages[messages.length - 1].id || 0);
     scrollChatToBottom();
