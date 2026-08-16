@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Parcel Pro</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<!-- ========================================
+     HEADER
+======================================== -->
+
+<header>
+
+    <div class="logo">
+    <img
+        src="images/parcelpro-logo.png"
+        alt="Parcel Pro"
+        class="site-logo"
+    >
+</div>
+
+    <div class="menu-icon" onclick="toggleMenu()">
+        ☰
+    </div>
+
+    <nav id="navMenu">
+
+       <a href="#home" data-i18n="Home">
+    Home
+</a>
+
+        <a href="#about" data-i18n="About">
+    About
+</a>
+
+        <a href="login.html" class="login-button" data-i18n="Login">
+    Login
+</a>
+
+        <select id="languageSelect">
+
+            <option value="en">
+                English
+            </option>
+
+            <option value="es">
+                Español
+            </option>
+
+            <option value="fr">
+                Français
+            </option>
+
+            <optgroup label="More Languages">
+
+                <option value="de">
+                    Deutsch
+                </option>
+
+                <option value="zh">
+                    中文
+                </option>
+
+                <option value="ja">
+                    日本語
+                </option>
+
+                <option value="ar">
+                    العربية
+                </option>
+
+            </optgroup>
+
+        </select>
+
+    </nav>
+
+</header>
+
+
+<!-- ========================================
+     HOME
+======================================== -->
+
+<section id="home">
+
+    <h1 data-i18n="Welcome to Parcel Pro">
+    Welcome to Parcel Pro
+</h1>
+
+</section>
+
+
+<!-- ========================================
+     SERVICES
+======================================== -->
+
+<section class="services">
+
+    <h2 data-i18n="Why Choose Parcel Pro?">
+    Why Choose Parcel Pro?
+</h2>
+
+    <p
+    class="services-subtitle"
+    data-i18n="We make shipping simple, secure, and reliable."
+>
+    We make shipping simple, secure, and reliable.
+</p>
+
+    <div class="service-grid">
+
+        <div class="service-card">
+    <div class="service-icon">🚚</div>
+
+    <h3 data-i18n="Fast & Reliable Delivery">
+        Fast & Reliable Delivery
+    </h3>
+
+    <p data-i18n="We make sure your packages reach their destination safely and on time.">
+        We make sure your packages reach their destination
+        safely and on time.
+    </p>
+</div>
+
+        <div class="service-card">
+    <div class="service-icon">📍</div>
+
+    <h3 data-i18n="Real-Time Tracking">
+        Real-Time Tracking
+    </h3>
+
+    <p data-i18n="Track your parcel and stay updated on its delivery progress from anywhere.">
+        Track your parcel and stay updated on its delivery
+        progress from anywhere.
+    </p>
+</div>
+
+        <div class="service-card">
+    <div class="service-icon">🔒</div>
+
+    <h3 data-i18n="Secure Package Handling">
+        Secure Package Handling
+    </h3>
+
+    <p data-i18n="Your packages are handled carefully from pickup to final delivery.">
+        Your packages are handled carefully from pickup
+        to final delivery.
+    </p>
+</div>
+
+        <div class="service-card">
+    <div class="service-icon">🌍</div>
+
+    <h3 data-i18n="Worldwide Shipping">
+        Worldwide Shipping
+    </h3>
+
+    <p data-i18n="Send packages across cities, countries, and international destinations.">
+        Send packages across cities, countries, and
+        international destinations.
+    </p>
+</div>
+
+       <div class="service-card">
+    <div class="service-icon">💬</div>
+
+    <h3 data-i18n="Customer Support">
+        Customer Support
+    </h3>
+
+    <p data-i18n="Get help whenever you need it through our customer support team.">
+        Get help whenever you need it through our
+        customer support team.
+    </p>
+</div>
+
+      <div class="service-card">
+    <div class="service-icon">💰</div>
+
+    <h3 data-i18n="Competitive Pricing">
+        Competitive Pricing
+    </h3>
+
+    <p data-i18n="Enjoy dependable shipping services at prices designed to give you great value.">
+        Enjoy dependable shipping services at prices
+        designed to give you great value.
+    </p>
+</div>  
+    
+
+</section>
+
+
+<!-- ========================================
+     TRACKING
+======================================== -->
+
+<section class="tracking">
+
+    <h2 data-i18n="Track Your Parcel">
+    Track Your Parcel
+</h2>
+
+    <p data-i18n="Enter your tracking number below.">
+    Enter your tracking number below.
+</p>
+
+    <form id="homeTrackForm">
+
+        <input
+            type="text"
+            id="homeTrackingInput"
+            placeholder="e.g. PP123456789"
+            required
+        >
+
+        <button type="submit" data-i18n="Track">
+    Track
+</button>
+
+    </form>
+
+    <div id="trackingResult"></div>
+
+</section>
+
+
+<!-- ========================================
+     STATISTICS
+======================================== -->
+
+<section class="stats">
+
+    <div>
+
+        <h2>
+            25K+
+        </h2>
+
+        <p data-i18n="Parcels Delivered">
+             Parcels Delivered
+       </p>
+
+    </div>
+
+
+    <div>
+
+        <h2>
+            10K+
+        </h2>
+
+        <p data-i18n="Happy Customers">
+             Happy Customers
+        </p>
+
+    </div>
+
+
+    <div>
+
+        <h2>
+            36
+        </h2>
+
+        <p data-i18n="Countries Covered">
+            Countries Covered
+        </p>
+
+    </div>
+
+</section>
+
+
+<!-- ========================================
+     ABOUT
+======================================== -->
+
+<section id="about">
+
+    <h2 data-i18n="About ParcelPro">
+        About ParcelPro
+    </h2>
+
+<p data-i18n="ParcelPro is a modern parcel delivery and tracking service built to make shipping simple, reliable, and transparent. From the moment your package leaves the sender to the moment it reaches its destination, ParcelPro keeps you informed every step of the way.">
+    ParcelPro is a modern parcel delivery and tracking service built to make
+    shipping simple, reliable, and transparent. From the moment your package
+    leaves the sender to the moment it reaches its destination, ParcelPro
+    keeps you informed every step of the way.
+</p>
+
+<div class="about-highlights">
+
+    <div class="about-item">
+        <span>🚚</span>
+        <div>
+
+            <h3 data-i18n="Reliable Delivery">
+                Reliable Delivery
+            </h3>
+            
+            <p data-i18n="We focus on safe and dependable parcel delivery.">
+                We focus on safe and dependable parcel delivery.
+            </p>
+
+        </div>
+    </div>
+
+    <div class="about-item">
+        <span>📍</span>
+        <div>
+            <h3 data-i18n="Real-Time Tracking">
+    Real-Time Tracking
+</h3>
+            <p data-i18n="Track your shipment and stay updated on its progress.">
+    Track your shipment and stay updated on its progress.
+</p>
+        </div>
+    </div>
+
+    <div class="about-item">
+        <span>🔒</span>
+        <div>
+            <h3 data-i18n="Secure Handling">
+    Secure Handling
+</h3>
+            <p data-i18n="Your parcels are handled with care from pickup to delivery.">
+    Your parcels are handled with care from pickup to delivery.
+</p>
+        </div>
+    </div>
+
+</div>
+
+</section>
+
+
+<!-- ========================================
+     CUSTOMER SUPPORT CHAT
+     MESSENGER STYLE
+======================================== -->
+
+<div
+    id="customerSupport"
+    class="customer-support"
+>
+
+
+    <!-- CHAT BUTTON -->
+
+    <button
+        id="chatToggle"
+        class="chat-toggle"
+        type="button"
+        aria-label="Open customer support"
+    >
+
+        <span class="chat-icon">
+            💬
+        </span>
+
+        <span class="chat-notification">
+            1
+        </span>
+
+    </button>
+
+
+    <!-- CHAT WINDOW -->
+
+    <div
+        id="chatWindow"
+        class="chat-window"
+    >
+
+
+        <!-- CHAT HEADER -->
+
+        <div class="chat-header">
+
+            <div class="chat-agent">
+
+                <div class="agent-avatar">
+                    🚚
+                </div>
+
+                <div class="agent-info">
+
+                    <strong data-i18n="Parcel Pro Support">
+    Parcel Pro Support
+</strong>
+
+<span data-i18n="Online">
+    ● Online
+</span>
+
+                </div>
+
+            </div>
+
+
+            <button
+                id="chatClose"
+                class="chat-close"
+                type="button"
+                aria-label="Close chat"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <!-- CHAT BODY -->
+
+        <div
+            id="chatMessages"
+            class="chat-messages"
+        >
+
+            <!-- AUTOMATIC WELCOME MESSAGE -->
+
+            <div class="chat-message support">
+
+                <div class="message-avatar">
+                    🚚
+                </div>
+
+                <div class="message-content">
+
+                    <div class="message-bubble">
+
+                       <p data-i18n="Hello!">
+    Hello! 👋
+</p>
+
+<p data-i18n="Welcome to Parcel Pro Customer Support.">
+    Welcome to Parcel Pro
+    Customer Support.
+</p>
+
+<p data-i18n="How can we help you today?">
+    How can we help you today?
+</p>
+
+                    </div>
+
+                    <span class="message-time">
+                        Just now
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <!-- QUICK QUESTIONS -->
+
+            <div
+                id="quickQuestions"
+                class="quick-questions"
+            >
+
+                <button
+                    type="button"
+                    data-question="Where is my parcel?"
+                    data-i18n="Where is my parcel?">
+                    📦 Where is my parcel?
+                    
+                </button>
+
+                <button
+                    type="button"
+                    data-question="I want to track my parcel."
+                    data-i18n="Track my parcel">
+                    🔎 Track my parcel
+                </button>
+
+                <button
+                    type="button"
+                    data-question="I need help with my delivery."
+                    data-i18n="Delivery help">
+                    🚚 Delivery help
+                </button>
+
+                <button
+                    type="button"
+                    data-question="I want to speak with customer support."
+                   data-i18n="Speak to support">
+                    👤 Speak to support
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- TYPING INDICATOR -->
+
+        <div
+            id="typingIndicator"
+            class="typing-indicator"
+        >
+
+            <span></span>
+            <span></span>
+            <span></span>
+
+        </div>
+
+
+        <!-- CHAT INPUT -->
+
+        <form
+            id="customerChatForm"
+            class="chat-input-area"
+        >
+
+            <input id="customerImageInput" class="attachment-input" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Choose an image">
+
+            <button type="button" class="attachment-button" id="customerImageButton" aria-label="Attach a photo" title="Attach a photo">📷</button>
+
+            <input
+                type="text"
+                id="customerChatInput"
+                placeholder="Type your message..."
+                data-i18n-placeholder="Type your message..."
+                autocomplete="off"
+            >
+
+            <button
+                type="submit"
+                class="chat-send-button"
+                aria-label="Send message"
+            >
+                ➤
+            </button>
+
+            <div id="customerImagePreview" class="attachment-preview" hidden>
+                <img alt="Selected image preview">
+                <span class="attachment-preview-name"></span>
+                <button type="button" class="attachment-remove" aria-label="Remove selected image">×</button>
+            </div>
+
+        </form>
+
+
+        <!-- CHAT FOOTER -->
+
+        <div class="chat-footer">
+
+            Parcel Pro Customer Support
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ========================================
+     FOOTER
+======================================== -->
+
+<footer>
+
+    <p>
+        &copy; 2026 ParcelPro.
+        All Rights Reserved.
+    </p>
+
+</footer>
+
+
+<!-- ========================================
+     JAVASCRIPT
+======================================== -->
+
+<script src="script.js"></script>
+
+</body>
+</html>
