@@ -2,6 +2,23 @@
 // PARCEL PRO - MAIN JAVASCRIPT
 // ========================================
 
+// ========================================
+// ADMIN AUTH DATA
+// ========================================
+
+function getAdminAuthData() {
+    return {
+        sessionId: getPresenceSessionId(),
+
+        token:
+            sessionStorage.getItem(
+                "parcelProAdminPresenceToken"
+            ) ||
+            localStorage.getItem(
+                "parcelProAdminPresenceToken"
+            )
+    };
+}
 
 // ========================================
 // MOBILE MENU
@@ -4061,22 +4078,6 @@ function setupAdminAccountSettings() {
     }
 
     form.dataset.settingsReady = "true";
-
-function getAdminAuthData() {
-
-    return {
-        sessionId: getPresenceSessionId(),
-
-        token:
-            sessionStorage.getItem(
-                "parcelProAdminPresenceToken"
-            ) ||
-            localStorage.getItem(
-                "parcelProAdminPresenceToken"
-            )
-    };
-
-}
 
 
     async function loadAdminAccount() {
