@@ -249,6 +249,10 @@ function setupLanguageSelector() {
 "Delivery help": "Delivery help",
 "Speak to support": "Speak to support",
 "Type your message...": "Type your message...",
+"Welcome to Parcel Pro Support!": "Welcome to Parcel Pro Support!",
+"Please enter your name:": "Please enter your name:",
+"Please enter your email address:": "Please enter your email address:",
+"Please enter a valid email address, for example name@example.com.": "Please enter a valid email address, for example name@example.com.",
         },
 
         es: {
@@ -355,7 +359,11 @@ function setupLanguageSelector() {
 "Track my parcel": "Rastrear mi paquete",
 "Delivery help": "Ayuda con la entrega",
 "Speak to support": "Hablar con soporte",
-"Type your message...": "Escribe tu mensaje..."
+"Type your message...": "Escribe tu mensaje...",
+"Welcome to Parcel Pro Support!": "¡Bienvenido al soporte de Parcel Pro!",
+"Please enter your name:": "Por favor, introduce tu nombre:",
+"Please enter your email address:": "Por favor, introduce tu dirección de correo electrónico:",
+"Please enter a valid email address, for example name@example.com.": "Por favor, introduce una dirección de correo electrónico válida, por ejemplo nombre@ejemplo.com."
         },
 
         fr: {
@@ -463,7 +471,11 @@ function setupLanguageSelector() {
 "Track my parcel": "Suivre mon colis",
 "Delivery help": "Aide à la livraison",
 "Speak to support": "Parler au support",
-"Type your message...": "Écrivez votre message..."
+"Type your message...": "Écrivez votre message...",
+"Welcome to Parcel Pro Support!": "Bienvenue dans l’assistance Parcel Pro !",
+"Please enter your name:": "Veuillez saisir votre nom :",
+"Please enter your email address:": "Veuillez saisir votre adresse e-mail :",
+"Please enter a valid email address, for example name@example.com.": "Veuillez saisir une adresse e-mail valide, par exemple nom@exemple.com."
         },
 
         de: {
@@ -614,7 +626,11 @@ function setupLanguageSelector() {
 "Track my parcel": "Mein Paket verfolgen",
 "Delivery help": "Hilfe bei der Lieferung",
 "Speak to support": "Mit dem Support sprechen",
-"Type your message...": "Geben Sie Ihre Nachricht ein..."
+"Type your message...": "Geben Sie Ihre Nachricht ein...",
+"Welcome to Parcel Pro Support!": "Willkommen beim Parcel Pro Support!",
+"Please enter your name:": "Bitte geben Sie Ihren Namen ein:",
+"Please enter your email address:": "Bitte geben Sie Ihre E-Mail-Adresse ein:",
+"Please enter a valid email address, for example name@example.com.": "Bitte geben Sie eine gültige E-Mail-Adresse ein, zum Beispiel name@beispiel.de."
 },            
 
         zh: {
@@ -722,7 +738,11 @@ function setupLanguageSelector() {
 "Track my parcel": "追踪我的包裹",
 "Delivery help": "配送帮助",
 "Speak to support": "联系客户支持",
-"Type your message...": "输入您的消息..."
+"Type your message...": "输入您的消息...",
+"Welcome to Parcel Pro Support!": "欢迎使用 Parcel Pro 客户支持！",
+"Please enter your name:": "请输入您的姓名：",
+"Please enter your email address:": "请输入您的电子邮箱地址：",
+"Please enter a valid email address, for example name@example.com.": "请输入有效的电子邮箱地址，例如 name@example.com。"
         },
 
         ja: {
@@ -831,6 +851,10 @@ function setupLanguageSelector() {
 "Delivery help": "配送に関するサポート",
 "Speak to support": "サポートに問い合わせる",
 "Type your message...": "メッセージを入力してください...",
+"Welcome to Parcel Pro Support!": "Parcel Pro サポートへようこそ！",
+"Please enter your name:": "お名前を入力してください：",
+"Please enter your email address:": "メールアドレスを入力してください：",
+"Please enter a valid email address, for example name@example.com.": "name@example.com のような有効なメールアドレスを入力してください。",
 "Searching for your parcel...":
     "荷物を検索しています...",
         },
@@ -940,8 +964,22 @@ function setupLanguageSelector() {
 "Track my parcel": "تتبع طردي",
 "Delivery help": "مساعدة في التوصيل",
 "Speak to support": "التحدث مع الدعم",
-"Type your message...": "اكتب رسالتك..."
+"Type your message...": "اكتب رسالتك...",
+"Welcome to Parcel Pro Support!": "مرحبًا بك في دعم Parcel Pro!",
+"Please enter your name:": "يرجى إدخال اسمك:",
+"Please enter your email address:": "يرجى إدخال عنوان بريدك الإلكتروني:",
+"Please enter a valid email address, for example name@example.com.": "يرجى إدخال عنوان بريد إلكتروني صالح، مثل name@example.com."
         }
+    };
+
+    window.getParcelProTranslation = function (key) {
+        const language =
+            localStorage.getItem("parcelProLanguage") || "en";
+
+        const dictionary =
+            translations[language] || translations.en;
+
+        return dictionary[key] || translations.en[key] || key;
     };
 
     function translatePage(language) {
@@ -1528,13 +1566,21 @@ function saveCustomerInformation(
 // ASK CUSTOMER FOR INFORMATION
 // ========================================
 
+function getCustomerTranslation(key) {
+    if (typeof window.getParcelProTranslation === "function") {
+        return window.getParcelProTranslation(key);
+    }
+
+    return key;
+}
+
 async function requestCustomerInformation() {
 
     loadCustomerInformation();
 
     if (
         customerName &&
-        customerEmail
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)
     ) {
 
         return true;
@@ -1543,7 +1589,9 @@ async function requestCustomerInformation() {
 
     const name =
         prompt(
-            "Welcome to Parcel Pro Support!\n\nPlease enter your name:"
+            getCustomerTranslation("Welcome to Parcel Pro Support!") +
+            "\n\n" +
+            getCustomerTranslation("Please enter your name:")
         );
 
     if (
@@ -1557,13 +1605,19 @@ async function requestCustomerInformation() {
 
     const email =
         prompt(
-            "Please enter your email address:"
+            getCustomerTranslation("Please enter your email address:")
         );
 
     if (
         !email ||
-        !email.trim()
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
     ) {
+
+        alert(
+            getCustomerTranslation(
+                "Please enter a valid email address, for example name@example.com."
+            )
+        );
 
         return false;
 
@@ -3173,6 +3227,106 @@ let adminRefreshTimer = null;
 
 let currentAdminCustomerEmail = "";
 
+let currentAdminConversationId = null;
+
+function normalizeAdminConversationEmail(value) {
+    return String(value || "")
+        .trim()
+        .toLowerCase();
+}
+
+function setActiveAdminConversation(email, conversationId = null) {
+    const normalizedEmail =
+        normalizeAdminConversationEmail(email);
+
+    const normalizedConversationId =
+        Number.isSafeInteger(Number(conversationId)) && Number(conversationId) > 0
+            ? Number(conversationId)
+            : null;
+
+    currentAdminCustomerEmail =
+        normalizedEmail;
+
+    currentAdminConversationId =
+        normalizedConversationId;
+
+    const conversationView =
+        document.getElementById("conversationView");
+
+    const replyForm =
+        document.getElementById("conversationReplyForm");
+
+    if (conversationView) {
+        conversationView.dataset.customerEmail =
+            normalizedEmail;
+
+        if (normalizedConversationId) {
+            conversationView.dataset.conversationId =
+                String(normalizedConversationId);
+        } else {
+            delete conversationView.dataset.conversationId;
+        }
+    }
+
+    if (replyForm) {
+        replyForm.dataset.customerEmail =
+            normalizedEmail;
+
+        if (normalizedConversationId) {
+            replyForm.dataset.conversationId =
+                String(normalizedConversationId);
+        } else {
+            delete replyForm.dataset.conversationId;
+        }
+    }
+
+    return normalizedEmail;
+}
+
+function setActiveAdminConversationEmail(email) {
+    return setActiveAdminConversation(
+        email,
+        currentAdminConversationId
+    );
+}
+
+function getActiveAdminConversationId() {
+    const conversationView =
+        document.getElementById("conversationView");
+
+    const replyForm =
+        document.getElementById("conversationReplyForm");
+
+    const candidates = [
+        currentAdminConversationId,
+        replyForm?.dataset.conversationId,
+        conversationView?.dataset.conversationId
+    ];
+
+    return candidates
+        .map(Number)
+        .find(value => Number.isSafeInteger(value) && value > 0) || null;
+}
+
+function getActiveAdminConversationEmail() {
+    const conversationView =
+        document.getElementById("conversationView");
+
+    const replyForm =
+        document.getElementById("conversationReplyForm");
+
+    const candidates = [
+        currentAdminCustomerEmail,
+        replyForm?.dataset.customerEmail,
+        conversationView?.dataset.customerEmail,
+        conversationView?.dataset.email
+    ];
+
+    return candidates
+        .map(normalizeAdminConversationEmail)
+        .find(Boolean) || "";
+}
+
 
 // ========================================
 // LOAD CONVERSATION LIST
@@ -3320,7 +3474,7 @@ async function deleteAdminConversation(email) {
             );
         }
 
-        currentAdminCustomerEmail = "";
+        setActiveAdminConversation("", null);
         await loadAdminConversations();
     } catch (error) {
         alert(error.message || "Unable to delete conversation.");
@@ -3465,7 +3619,8 @@ async function loadAdminConversations() {
                 () => {
 
                     openAdminConversation(
-                        conversation.customer_email
+                        conversation.customer_email,
+                        conversation.id
                     );
 
                 }
@@ -3564,7 +3719,8 @@ async function awaitCustomerOnlineStatus(
 // ========================================
 
 async function openAdminConversation(
-    email
+    email,
+    conversationId = null
 ) {
 
     const listView =
@@ -3586,11 +3742,8 @@ async function openAdminConversation(
 
     }
 
-    currentAdminCustomerEmail =
-        email;
-
-    conversationView.dataset.email =
-        email;
+    const activeCustomerEmail =
+        setActiveAdminConversation(email, conversationId);
 
     listView.style.display =
         "none";
@@ -3599,10 +3752,11 @@ async function openAdminConversation(
         "block";
 
     await loadAdminConversation(
-        email
+        activeCustomerEmail,
+        getActiveAdminConversationId()
     );
 
-    loadCustomerPresenceInHeader(email);
+    loadCustomerPresenceInHeader(activeCustomerEmail);
 
 }
 
@@ -3612,7 +3766,8 @@ async function openAdminConversation(
 // ========================================
 
 async function loadAdminConversation(
-    email
+    email,
+    conversationId = getActiveAdminConversationId()
 ) {
 
     const messagesContainer =
@@ -3633,10 +3788,9 @@ async function loadAdminConversation(
 
         const response =
             await fetch(
-                "/conversations/" +
-                encodeURIComponent(
-                    email
-                ),
+                conversationId
+                    ? "/conversations/by-id/" + conversationId
+                    : "/conversations/" + encodeURIComponent(email),
                 {
                     cache:
                         "no-store"
@@ -3667,8 +3821,15 @@ async function loadAdminConversation(
             data.conversation
         ) {
 
+            const activeCustomerEmail =
+                setActiveAdminConversation(
+                    data.conversation.customer_email || email,
+                    data.conversation.id || conversationId
+                );
+
             title.textContent = data.conversation.customer_name;
-            document.getElementById("conversationSubtitle").textContent = email;
+            document.getElementById("conversationSubtitle").textContent =
+                activeCustomerEmail;
             document.querySelector(".conversation-avatar").textContent =
                 (data.conversation.customer_name || "C").trim().charAt(0).toUpperCase();
 
@@ -3824,10 +3985,10 @@ function setupBackToConversations() {
         "click",
         () => {
 
-            currentAdminCustomerEmail =
-                "";
+            setActiveAdminConversation("", null);
 
             delete conversationView.dataset.email;
+            delete conversationView.dataset.customerEmail;
 
             conversationView.style.display =
                 "none";
@@ -4087,7 +4248,7 @@ function imageFileToBase64(file) {
     });
 }
 
-async function sendConversationImage(sender, email, name, message, file) {
+async function sendConversationImage(sender, email, name, message, file, conversationId = null) {
     const body = {
         sender,
         email,
@@ -4101,6 +4262,7 @@ async function sendConversationImage(sender, email, name, message, file) {
 
     body.sessionId = auth.sessionId;
     body.token = auth.token;
+    body.conversationId = conversationId;
     }
     const response = await fetch("/conversation-image", {
         method: "POST",
@@ -4314,22 +4476,11 @@ function setupAdminReplyForm() {
         const image =
             selectedImages.admin;
 
-        const conversationView =
-            document.getElementById("conversationView");
-
-        const conversationSubtitle =
-            document.getElementById("conversationSubtitle");
-
-        const customerEmailCandidates = [
-            currentAdminCustomerEmail,
-            conversationView?.dataset.email,
-            conversationSubtitle?.textContent
-        ];
-
         const activeCustomerEmail =
-            customerEmailCandidates
-                .map(value => String(value || "").trim().toLowerCase())
-                .find(value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) || "";
+            getActiveAdminConversationEmail();
+
+        const activeConversationId =
+            getActiveAdminConversationId();
 
         // Must have either text or an image
         if (
@@ -4345,13 +4496,10 @@ function setupAdminReplyForm() {
             return;
         }
 
-        currentAdminCustomerEmail =
-            activeCustomerEmail;
-
-        if (conversationView) {
-            conversationView.dataset.email =
-                activeCustomerEmail;
-        }
+        setActiveAdminConversation(
+            activeCustomerEmail,
+            activeConversationId
+        );
 
         try {
 
@@ -4366,7 +4514,8 @@ function setupAdminReplyForm() {
                     activeCustomerEmail,
                     "ParcelPro Support",
                     message,
-                    image
+                    image,
+                    activeConversationId
                 );
 
                 selectedImages.admin = null;
@@ -4399,11 +4548,9 @@ function setupAdminReplyForm() {
 
                 const response =
                     await fetch(
-                        "/conversations/" +
-                        encodeURIComponent(
-                            activeCustomerEmail
-                        ) +
-                        "/reply",
+                        activeConversationId
+                            ? "/conversations/by-id/" + activeConversationId + "/reply"
+                            : "/conversations/" + encodeURIComponent(activeCustomerEmail) + "/reply",
                         {
                             method: "POST",
 
@@ -4440,7 +4587,8 @@ function setupAdminReplyForm() {
 
             // Reload conversation
             await loadAdminConversation(
-                activeCustomerEmail
+                activeCustomerEmail,
+                activeConversationId
             );
 
         }
@@ -4840,10 +4988,14 @@ function startAdminPresence() {
 
 function refreshCurrentCustomerPresence(status) {
     if (status.email !== currentAdminCustomerEmail) return;
-    const subtitle = document.getElementById("conversationSubtitle");
     const state = document.querySelector(".conversation-state");
-    if (subtitle) subtitle.textContent = status.online ? "Online" : formatPresenceLastSeen(status.lastSeen);
-    if (state) state.innerHTML = `<span class="support-status-dot ${status.online ? "" : "is-offline"}"></span>${status.online ? "Online" : "Offline"}`;
+    if (state) {
+        const statusText = status.online
+            ? "Online"
+            : formatPresenceLastSeen(status.lastSeen);
+
+        state.innerHTML = `<span class="support-status-dot ${status.online ? "" : "is-offline"}"></span>${escapeHTML(statusText)}`;
+    }
 }
 
 async function loadCustomerPresenceInHeader(email) {

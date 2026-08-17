@@ -614,8 +614,12 @@ function saveCustomerConversationMessage(
 function saveAdminConversationMessage(
     customerEmail,
     message,
-    callback
+    callback,
+    conversationId = null
 ) {
+
+    const lookupById =
+        Number.isSafeInteger(Number(conversationId)) && Number(conversationId) > 0;
 
     db.query(
         `
@@ -624,12 +628,12 @@ function saveAdminConversationMessage(
 
             FROM conversations
 
-            WHERE customer_email = ?
+            WHERE ${lookupById ? "id" : "customer_email"} = ?
 
             LIMIT 1
 
         `,
-        [customerEmail],
+        [lookupById ? Number(conversationId) : customerEmail],
         (err, conversations) => {
 
             if (err) {
@@ -722,10 +726,19 @@ function saveAdminConversationMessage(
 // SAVE IMAGE CONVERSATION MESSAGE
 // ========================================
 
-function saveImageConversationMessage(sender, name, email, text, attachment, callback) {
+function saveImageConversationMessage(sender, name, email, text, attachment, callback, adminConversationId = null) {
     const getConversation = sender === "customer"
         ? done => getOrCreateConversation(name, email, done)
-        : done => db.query("SELECT id FROM conversations WHERE customer_email = ? LIMIT 1", [email], (err, rows) => done(err, rows[0] && rows[0].id));
+        : done => {
+            const lookupById =
+                Number.isSafeInteger(Number(adminConversationId)) && Number(adminConversationId) > 0;
+
+            db.query(
+                `SELECT id FROM conversations WHERE ${lookupById ? "id" : "customer_email"} = ? LIMIT 1`,
+                [lookupById ? Number(adminConversationId) : email],
+                (err, rows) => done(err, rows[0] && rows[0].id)
+            );
+        };
 
     getConversation((err, conversationId) => {
         if (err) return callback(err);
@@ -2484,7 +2497,7 @@ const server = http.createServer(
 
                     if (
                         !name ||
-                        !email ||
+                        !isValidEmail(email) ||
                         !message
                     ) {
 
@@ -2494,7 +2507,7 @@ const server = http.createServer(
                             {
                                 success: false,
                                 message:
-                                    "Name, email, and message are required."
+                                    "Name, a valid email, and message are required."
                             }
                         );
 
@@ -2595,8 +2608,16 @@ Message: ${message}
                 const sender = data.sender === "admin" ? "admin" : "customer";
                 const name = String(data.name || "").trim();
                 const email = String(data.email || "").trim().toLowerCase();
+                const conversationId = Number(data.conversationId);
+                const hasAdminConversationId =
+                    sender === "admin" &&
+                    Number.isSafeInteger(conversationId) &&
+                    conversationId > 0;
                 const text = String(data.message || "").trim().slice(0, 4000);
-                if (!isValidEmail(email) || (sender === "customer" && !name)) return sendJSON(res, 400, { success: false, message: "Valid sender details are required." });
+                if (
+                    (sender === "customer" && (!isValidEmail(email) || !name)) ||
+                    (sender === "admin" && !hasAdminConversationId && !isValidEmail(email))
+                ) return sendJSON(res, 400, { success: false, message: "Valid sender details are required." });
 
                 const continueUpload = () => saveUploadedImage(data.imageData, data.imageName, (imageErr, attachment) => {
                     if (imageErr) return sendJSON(res, 400, { success: false, message: imageErr.message });
@@ -2607,7 +2628,7 @@ Message: ${message}
                         }
                         if (sender === "customer") customerLogin(name, email, () => {});
                         sendJSON(res, 200, { success: true, imageUrl: attachment.url });
-                    });
+                    }, conversationId);
                 });
 
                 if (sender !== "admin") return continueUpload();
@@ -2855,7 +2876,7 @@ Message: ${message}
 
                     if (
                         !name ||
-                        !email ||
+                        !isValidEmail(email) ||
                         !message
                     ) {
 
@@ -2865,7 +2886,7 @@ Message: ${message}
                             {
                                 success: false,
                                 message:
-                                    "Name, email, and message are required."
+                                    "Name, a valid email, and message are required."
                             }
                         );
 
@@ -3209,6 +3230,17 @@ ORDER BY
                     )
                 );
 
+            const conversationIdMatch =
+                customerEmail.match(/^by-id\/(\d+)$/);
+
+            const lookupColumn =
+                conversationIdMatch ? "id" : "customer_email";
+
+            const lookupValue =
+                conversationIdMatch
+                    ? Number(conversationIdMatch[1])
+                    : customerEmail;
+
 
             db.query(
                 `
@@ -3227,12 +3259,12 @@ ORDER BY
 
                     FROM conversations
 
-                    WHERE customer_email = ?
+                    WHERE ${lookupColumn} = ?
 
                     LIMIT 1
 
                 `,
-                [customerEmail],
+                [lookupValue],
                 (err, conversations) => {
 
                     if (err) {
@@ -3367,6 +3399,14 @@ ORDER BY
                     )
                 );
 
+            const conversationIdMatch =
+                customerEmail.match(/^by-id\/(\d+)$/);
+
+            const conversationId =
+                conversationIdMatch
+                    ? Number(conversationIdMatch[1])
+                    : null;
+
 
             readRequestBody(
                 req,
@@ -3450,7 +3490,8 @@ ORDER BY
                                 }
                             );
 
-                        }
+                        },
+                        conversationId
                     );
 
                 }
@@ -4169,12 +4210,18 @@ if (
                 }
 
 
+                const responseHeaders = {
+                    "Content-Type": contentType
+                };
+
+                if ([".html", ".css", ".js"].includes(ext)) {
+                    responseHeaders["Cache-Control"] =
+                        "no-cache, no-store, must-revalidate";
+                }
+
                 res.writeHead(
                     200,
-                    {
-                        "Content-Type":
-                            contentType
-                    }
+                    responseHeaders
                 );
 
 
