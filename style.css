@@ -3439,33 +3439,6 @@ a:focus-visible {
 
 }
 
-.message-delete-button,
-.admin-message-delete-button,
-.conversation-delete-button {
-    border: 1px solid rgba(248, 113, 113, .45);
-    border-radius: 8px;
-    background: transparent;
-    color: #fca5a5;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 600;
-    padding: 5px 9px;
-}
-
-.message-delete-button,
-.admin-message-delete-button {
-    align-self: flex-end;
-    margin-top: 5px;
-}
-
-.message-delete-button:hover,
-.admin-message-delete-button:hover,
-.conversation-delete-button:hover {
-    background: rgba(220, 38, 38, .16);
-    border-color: #f87171;
-    color: #fecaca;
-}
-
 .support-conversation-row {
     align-items: center;
     display: flex;
@@ -3475,12 +3448,189 @@ a:focus-visible {
 
 .support-conversation-row .support-conversation {
     flex: 1;
+    min-width: 0;
+}
+
+.message-content,
+.admin-message-bubble {
+    position: relative;
+}
+
+.message-options-button {
+    align-items: center;
+    background: rgba(15, 23, 42, .72);
+    border: 1px solid rgba(148, 163, 184, .25);
+    border-radius: 50%;
+    color: #cbd5e1;
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 20px;
+    height: 30px;
+    justify-content: center;
+    line-height: 1;
+    padding: 0 0 4px;
+    transition:
+        background .16s ease,
+        border-color .16s ease,
+        color .16s ease,
+        opacity .16s ease,
+        transform .16s ease;
+    width: 30px;
+}
+
+.message-options-button:hover,
+.message-options-button:focus-visible {
+    background: #243247;
+    border-color: rgba(96, 165, 250, .6);
+    color: #fff;
+    transform: scale(1.06);
+}
+
+.message-delete-button,
+.admin-message-delete-button {
+    opacity: 0;
+    position: absolute;
+    right: 7px;
+    top: 7px;
+    z-index: 3;
+}
+
+.chat-message.customer .message-bubble,
+.admin-message-bubble {
+    padding-right: 42px;
+}
+
+.message-content:hover .message-delete-button,
+.message-delete-button:focus-visible,
+.admin-message-bubble:hover .admin-message-delete-button,
+.admin-message-delete-button:focus-visible {
+    opacity: 1;
 }
 
 .conversation-delete-button {
     flex-shrink: 0;
+    position: static;
 }
 
-.admin-message-bubble {
-    position: relative;
+.delete-dialog-backdrop {
+    align-items: flex-end;
+    background: rgba(2, 6, 23, .68);
+    display: flex;
+    inset: 0;
+    justify-content: center;
+    opacity: 0;
+    padding: 20px;
+    position: fixed;
+    transition: opacity .16s ease;
+    z-index: 10000;
+}
+
+.delete-dialog-backdrop.is-visible {
+    opacity: 1;
+}
+
+.delete-dialog {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 22px;
+    box-shadow: 0 24px 70px rgba(2, 6, 23, .35);
+    color: #0f172a;
+    max-width: 430px;
+    padding: 24px;
+    transform: translateY(18px) scale(.98);
+    transition: transform .16s ease;
+    width: 100%;
+}
+
+.delete-dialog-backdrop.is-visible .delete-dialog {
+    transform: translateY(0) scale(1);
+}
+
+.delete-dialog-icon {
+    align-items: center;
+    background: #fee2e2;
+    border-radius: 14px;
+    display: flex;
+    font-size: 22px;
+    height: 48px;
+    justify-content: center;
+    margin-bottom: 16px;
+    width: 48px;
+}
+
+.delete-dialog h3 {
+    color: #0f172a;
+    font-size: 20px;
+    margin: 0 0 8px;
+}
+
+.delete-dialog p {
+    color: #64748b;
+    font-size: 14px;
+    line-height: 1.55;
+    margin: 0;
+}
+
+.delete-dialog-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 24px;
+}
+
+.delete-dialog-actions button {
+    border: 0;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+    min-height: 44px;
+    padding: 10px 16px;
+}
+
+.delete-dialog-cancel {
+    background: #f1f5f9;
+    color: #334155;
+}
+
+.delete-dialog-confirm {
+    background: #dc2626;
+    color: #fff;
+}
+
+.delete-dialog-confirm:hover,
+.delete-dialog-confirm:focus-visible {
+    background: #b91c1c;
+}
+
+@media (min-width: 640px) {
+    .delete-dialog-backdrop {
+        align-items: center;
+    }
+}
+
+@media (hover: none), (max-width: 639px) {
+    .message-delete-button,
+    .admin-message-delete-button {
+        opacity: 1;
+        right: 5px;
+        top: 5px;
+    }
+
+    .message-bubble,
+    .admin-message-bubble {
+        padding-right: 40px;
+    }
+
+    .support-conversation-row {
+        gap: 6px;
+    }
+
+    .delete-dialog-actions {
+        flex-direction: column-reverse;
+    }
+
+    .delete-dialog-actions button {
+        width: 100%;
+    }
 }

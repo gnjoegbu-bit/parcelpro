@@ -3178,8 +3178,89 @@ let currentAdminCustomerEmail = "";
 // LOAD CONVERSATION LIST
 // ========================================
 
+function showDeleteDialog({ title, description, confirmLabel }) {
+    return new Promise(resolve => {
+        document.querySelector(".delete-dialog-backdrop")?.remove();
+
+        const backdrop = document.createElement("div");
+        backdrop.className = "delete-dialog-backdrop";
+        backdrop.innerHTML = `
+            <div
+                class="delete-dialog"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="deleteDialogTitle"
+                aria-describedby="deleteDialogDescription"
+            >
+                <div class="delete-dialog-icon" aria-hidden="true">🗑</div>
+                <div class="delete-dialog-copy">
+                    <h3 id="deleteDialogTitle"></h3>
+                    <p id="deleteDialogDescription"></p>
+                </div>
+                <div class="delete-dialog-actions">
+                    <button type="button" class="delete-dialog-cancel">
+                        Cancel
+                    </button>
+                    <button type="button" class="delete-dialog-confirm"></button>
+                </div>
+            </div>
+        `;
+
+        const dialog = backdrop.querySelector(".delete-dialog");
+        const cancelButton = backdrop.querySelector(".delete-dialog-cancel");
+        const confirmButton = backdrop.querySelector(".delete-dialog-confirm");
+        backdrop.querySelector("#deleteDialogTitle").textContent = title;
+        backdrop.querySelector("#deleteDialogDescription").textContent =
+            description;
+        confirmButton.textContent = confirmLabel;
+
+        let settled = false;
+
+        const close = confirmed => {
+            if (settled) return;
+            settled = true;
+            document.removeEventListener("keydown", handleKeydown);
+            backdrop.classList.remove("is-visible");
+            setTimeout(() => backdrop.remove(), 160);
+            resolve(confirmed);
+        };
+
+        const handleKeydown = event => {
+            if (event.key === "Escape") {
+                close(false);
+            }
+        };
+
+        backdrop.addEventListener("click", event => {
+            if (event.target === backdrop) {
+                close(false);
+            }
+        });
+        dialog.addEventListener("click", event => event.stopPropagation());
+        cancelButton.addEventListener("click", () => close(false));
+        confirmButton.addEventListener("click", () => close(true));
+        document.addEventListener("keydown", handleKeydown);
+        document.body.appendChild(backdrop);
+        requestAnimationFrame(() => {
+            backdrop.classList.add("is-visible");
+            confirmButton.focus();
+        });
+    });
+}
+
 async function deleteAdminMessage(messageId) {
-    if (!messageId || !window.confirm("Delete this message or photo?")) {
+    if (!messageId) {
+        return;
+    }
+
+    const confirmed = await showDeleteDialog({
+        title: "Delete message?",
+        description:
+            "This message or photo will be removed for both you and the customer.",
+        confirmLabel: "Delete for everyone"
+    });
+
+    if (!confirmed) {
         return;
     }
 
@@ -3207,12 +3288,18 @@ async function deleteAdminMessage(messageId) {
 }
 
 async function deleteAdminConversation(email) {
-    if (
-        !email ||
-        !window.confirm(
-            "Delete this entire conversation, including all messages and photos?"
-        )
-    ) {
+    if (!email) {
+        return;
+    }
+
+    const confirmed = await showDeleteDialog({
+        title: "Delete conversation?",
+        description:
+            "All messages and photos in this conversation will be permanently removed.",
+        confirmLabel: "Delete conversation"
+    });
+
+    if (!confirmed) {
         return;
     }
 
@@ -3389,8 +3476,10 @@ async function loadAdminConversations() {
 
             const deleteButton = document.createElement("button");
             deleteButton.type = "button";
-            deleteButton.className = "conversation-delete-button";
-            deleteButton.textContent = "Delete";
+            deleteButton.className =
+                "conversation-delete-button message-options-button";
+            deleteButton.textContent = "⋮";
+            deleteButton.title = "Conversation options";
             deleteButton.setAttribute(
                 "aria-label",
                 `Delete conversation with ${conversation.customer_name}`
@@ -3662,10 +3751,10 @@ async function loadAdminConversation(
 
                         <button
                             type="button"
-                            class="admin-message-delete-button"
+                            class="admin-message-delete-button message-options-button"
                             data-message-id="${Number(message.id)}"
                         >
-                            Delete
+                            ⋮
                         </button>
 
                     </div>
@@ -4051,7 +4140,14 @@ async function deleteCustomerChatMessage(messageId) {
         return;
     }
 
-    if (!window.confirm("Delete this message or photo?")) {
+    const confirmed = await showDeleteDialog({
+        title: "Delete message?",
+        description:
+            "This message or photo will be removed for both you and ParcelPro support.",
+        confirmLabel: "Delete for everyone"
+    });
+
+    if (!confirmed) {
         return;
     }
 
@@ -4119,8 +4215,10 @@ function addMessageToChat(
     if (sender === "customer" && messageId) {
         const deleteButton = document.createElement("button");
         deleteButton.type = "button";
-        deleteButton.className = "message-delete-button";
-        deleteButton.textContent = "Delete";
+        deleteButton.className =
+            "message-delete-button message-options-button";
+        deleteButton.textContent = "⋮";
+        deleteButton.title = "Message options";
         deleteButton.setAttribute(
             "aria-label",
             imageUrl ? "Delete your photo" : "Delete your message"
