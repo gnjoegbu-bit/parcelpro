@@ -253,6 +253,9 @@ function setupLanguageSelector() {
 "Please enter your name:": "Please enter your name:",
 "Please enter your email address:": "Please enter your email address:",
 "Please enter a valid email address, for example name@example.com.": "Please enter a valid email address, for example name@example.com.",
+"Copy": "Copy",
+"Paste into reply": "Paste into reply",
+"Delete": "Delete",
         },
 
         es: {
@@ -363,7 +366,10 @@ function setupLanguageSelector() {
 "Welcome to Parcel Pro Support!": "¡Bienvenido al soporte de Parcel Pro!",
 "Please enter your name:": "Por favor, introduce tu nombre:",
 "Please enter your email address:": "Por favor, introduce tu dirección de correo electrónico:",
-"Please enter a valid email address, for example name@example.com.": "Por favor, introduce una dirección de correo electrónico válida, por ejemplo nombre@ejemplo.com."
+"Please enter a valid email address, for example name@example.com.": "Por favor, introduce una dirección de correo electrónico válida, por ejemplo nombre@ejemplo.com.",
+"Copy": "Copiar",
+"Paste into reply": "Pegar en la respuesta",
+"Delete": "Eliminar"
         },
 
         fr: {
@@ -475,7 +481,10 @@ function setupLanguageSelector() {
 "Welcome to Parcel Pro Support!": "Bienvenue dans l’assistance Parcel Pro !",
 "Please enter your name:": "Veuillez saisir votre nom :",
 "Please enter your email address:": "Veuillez saisir votre adresse e-mail :",
-"Please enter a valid email address, for example name@example.com.": "Veuillez saisir une adresse e-mail valide, par exemple nom@exemple.com."
+"Please enter a valid email address, for example name@example.com.": "Veuillez saisir une adresse e-mail valide, par exemple nom@exemple.com.",
+"Copy": "Copier",
+"Paste into reply": "Coller dans la réponse",
+"Delete": "Supprimer"
         },
 
         de: {
@@ -630,7 +639,10 @@ function setupLanguageSelector() {
 "Welcome to Parcel Pro Support!": "Willkommen beim Parcel Pro Support!",
 "Please enter your name:": "Bitte geben Sie Ihren Namen ein:",
 "Please enter your email address:": "Bitte geben Sie Ihre E-Mail-Adresse ein:",
-"Please enter a valid email address, for example name@example.com.": "Bitte geben Sie eine gültige E-Mail-Adresse ein, zum Beispiel name@beispiel.de."
+"Please enter a valid email address, for example name@example.com.": "Bitte geben Sie eine gültige E-Mail-Adresse ein, zum Beispiel name@beispiel.de.",
+"Copy": "Kopieren",
+"Paste into reply": "In Antwort einfügen",
+"Delete": "Löschen"
 },            
 
         zh: {
@@ -742,7 +754,10 @@ function setupLanguageSelector() {
 "Welcome to Parcel Pro Support!": "欢迎使用 Parcel Pro 客户支持！",
 "Please enter your name:": "请输入您的姓名：",
 "Please enter your email address:": "请输入您的电子邮箱地址：",
-"Please enter a valid email address, for example name@example.com.": "请输入有效的电子邮箱地址，例如 name@example.com。"
+"Please enter a valid email address, for example name@example.com.": "请输入有效的电子邮箱地址，例如 name@example.com。",
+"Copy": "复制",
+"Paste into reply": "粘贴到回复中",
+"Delete": "删除"
         },
 
         ja: {
@@ -855,6 +870,9 @@ function setupLanguageSelector() {
 "Please enter your name:": "お名前を入力してください：",
 "Please enter your email address:": "メールアドレスを入力してください：",
 "Please enter a valid email address, for example name@example.com.": "name@example.com のような有効なメールアドレスを入力してください。",
+"Copy": "コピー",
+"Paste into reply": "返信欄に貼り付け",
+"Delete": "削除",
 "Searching for your parcel...":
     "荷物を検索しています...",
         },
@@ -968,7 +986,10 @@ function setupLanguageSelector() {
 "Welcome to Parcel Pro Support!": "مرحبًا بك في دعم Parcel Pro!",
 "Please enter your name:": "يرجى إدخال اسمك:",
 "Please enter your email address:": "يرجى إدخال عنوان بريدك الإلكتروني:",
-"Please enter a valid email address, for example name@example.com.": "يرجى إدخال عنوان بريد إلكتروني صالح، مثل name@example.com."
+"Please enter a valid email address, for example name@example.com.": "يرجى إدخال عنوان بريد إلكتروني صالح، مثل name@example.com.",
+"Copy": "نسخ",
+"Paste into reply": "لصق في الرد",
+"Delete": "حذف"
         }
     };
 
@@ -3402,6 +3423,170 @@ function showDeleteDialog({ title, description, confirmLabel }) {
     });
 }
 
+let messageActionClipboardText = "";
+let closeActiveMessageActionMenu = null;
+
+async function copyMessageText(text) {
+    const value = String(text || "");
+
+    if (!value) {
+        return false;
+    }
+
+    messageActionClipboardText = value;
+
+    if (navigator.clipboard?.writeText) {
+        try {
+            await navigator.clipboard.writeText(value);
+            return true;
+        } catch (error) {
+            console.warn("System clipboard copy was unavailable:", error);
+        }
+    }
+
+    const temporaryInput = document.createElement("textarea");
+    temporaryInput.value = value;
+    temporaryInput.setAttribute("readonly", "");
+    temporaryInput.style.position = "fixed";
+    temporaryInput.style.opacity = "0";
+    document.body.appendChild(temporaryInput);
+    temporaryInput.select();
+    const copied = document.execCommand("copy");
+    temporaryInput.remove();
+    return copied;
+}
+
+async function pasteMessageText(input, fallbackText = "") {
+    if (!input) {
+        return false;
+    }
+
+    let value = messageActionClipboardText || String(fallbackText || "");
+
+    if (navigator.clipboard?.readText) {
+        try {
+            const clipboardValue = await navigator.clipboard.readText();
+            if (clipboardValue) value = clipboardValue;
+        } catch (error) {
+            console.warn("System clipboard paste was unavailable:", error);
+        }
+    }
+
+    if (!value) {
+        return false;
+    }
+
+    const start = Number.isInteger(input.selectionStart)
+        ? input.selectionStart
+        : input.value.length;
+    const end = Number.isInteger(input.selectionEnd)
+        ? input.selectionEnd
+        : start;
+
+    input.value =
+        input.value.slice(0, start) + value + input.value.slice(end);
+
+    const cursorPosition = start + value.length;
+    input.focus();
+    input.setSelectionRange?.(cursorPosition, cursorPosition);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    return true;
+}
+
+function showMessageActionMenu({
+    anchor,
+    message,
+    input,
+    canDelete,
+    onDelete,
+    translate = value => value
+}) {
+    closeActiveMessageActionMenu?.();
+
+    const menu = document.createElement("div");
+    menu.className = "message-action-menu";
+    menu.setAttribute("role", "menu");
+
+    const addAction = ({ label, icon, className = "", disabled = false, action }) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `message-action-item ${className}`.trim();
+        button.disabled = disabled;
+        button.setAttribute("role", "menuitem");
+        button.innerHTML = `<span aria-hidden="true">${icon}</span><span>${escapeHTML(label)}</span>`;
+        button.addEventListener("click", async () => {
+            closeMenu();
+            await action();
+        });
+        menu.appendChild(button);
+    };
+
+    addAction({
+        label: translate("Copy"),
+        icon: "⧉",
+        disabled: !String(message || "").trim(),
+        action: () => copyMessageText(message)
+    });
+
+    addAction({
+        label: translate("Paste into reply"),
+        icon: "▣",
+        action: () => pasteMessageText(input, message)
+    });
+
+    if (canDelete && onDelete) {
+        addAction({
+            label: translate("Delete"),
+            icon: "♲",
+            className: "is-destructive",
+            action: onDelete
+        });
+    }
+
+    const closeMenu = () => {
+        document.removeEventListener("click", handleOutsideClick);
+        document.removeEventListener("keydown", handleKeydown);
+        window.removeEventListener("scroll", closeMenu, true);
+        menu.remove();
+        if (closeActiveMessageActionMenu === closeMenu) {
+            closeActiveMessageActionMenu = null;
+        }
+    };
+
+    const handleOutsideClick = event => {
+        if (!menu.contains(event.target) && event.target !== anchor) {
+            closeMenu();
+        }
+    };
+
+    const handleKeydown = event => {
+        if (event.key === "Escape") closeMenu();
+    };
+
+    document.body.appendChild(menu);
+
+    const anchorRect = anchor.getBoundingClientRect();
+    const menuRect = menu.getBoundingClientRect();
+    const left = Math.min(
+        window.innerWidth - menuRect.width - 10,
+        Math.max(10, anchorRect.right - menuRect.width)
+    );
+    const top = anchorRect.bottom + menuRect.height + 8 <= window.innerHeight
+        ? anchorRect.bottom + 6
+        : anchorRect.top - menuRect.height - 6;
+
+    menu.style.left = `${left}px`;
+    menu.style.top = `${Math.max(10, top)}px`;
+    closeActiveMessageActionMenu = closeMenu;
+
+    setTimeout(() => {
+        document.addEventListener("click", handleOutsideClick);
+        document.addEventListener("keydown", handleKeydown);
+        window.addEventListener("scroll", closeMenu, true);
+        menu.querySelector("button:not(:disabled)")?.focus();
+    }, 0);
+}
+
 async function deleteAdminMessage(messageId) {
     if (!messageId) {
         return;
@@ -3923,8 +4108,14 @@ async function loadAdminConversation(
 
                 wrapper
                     .querySelector(".admin-message-delete-button")
-                    ?.addEventListener("click", () => {
-                        deleteAdminMessage(Number(message.id));
+                    ?.addEventListener("click", event => {
+                        showMessageActionMenu({
+                            anchor: event.currentTarget,
+                            message: message.message,
+                            input: document.getElementById("conversationReply"),
+                            canDelete: true,
+                            onDelete: () => deleteAdminMessage(Number(message.id))
+                        });
                     });
 
                 messagesContainer.appendChild(
@@ -4467,21 +4658,30 @@ function addMessageToChat(
     time.textContent = formatMessageTime(createdAt);
     content.append(bubble, time);
 
-    if (sender === "customer" && messageId) {
-        const deleteButton = document.createElement("button");
-        deleteButton.type = "button";
-        deleteButton.className =
+    if (messageId) {
+        const optionsButton = document.createElement("button");
+        optionsButton.type = "button";
+        optionsButton.className =
             "message-delete-button message-options-button";
-        deleteButton.textContent = "⋮";
-        deleteButton.title = "Message options";
-        deleteButton.setAttribute(
+        optionsButton.textContent = "⋮";
+        optionsButton.title = "Message options";
+        optionsButton.setAttribute(
             "aria-label",
-            imageUrl ? "Delete your photo" : "Delete your message"
+            "Message options"
         );
-        deleteButton.addEventListener("click", () => {
-            deleteCustomerChatMessage(messageId);
+        optionsButton.addEventListener("click", event => {
+            showMessageActionMenu({
+                anchor: event.currentTarget,
+                message,
+                input: document.getElementById("customerChatInput"),
+                canDelete: sender === "customer",
+                onDelete: sender === "customer"
+                    ? () => deleteCustomerChatMessage(messageId)
+                    : null,
+                translate: getCustomerTranslation
+            });
         });
-        content.appendChild(deleteButton);
+        content.appendChild(optionsButton);
     }
 
     wrapper.append(avatar, content);
