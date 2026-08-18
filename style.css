@@ -2545,6 +2545,9 @@ a:focus-visible {
 #conversationView #backToConversations { display: inline-flex; align-items: center; gap: 8px; width: auto; margin: 0; padding: 8px 0; border: 0; background: transparent; color: #b8cae4; font-size: 13px; font-weight: 700; }
 #conversationView #backToConversations:hover { background: transparent; color: #fff; }
 .conversation-customer { display: flex; align-items: center; gap: 13px; padding: 20px 24px; border-bottom: 1px solid #2a3951; background: #1a2940; }
+.conversation-customer-details { min-width: 0; }
+.correct-customer-email-button { width: auto; margin-left: auto; padding: 9px 13px; border: 1px solid #3b5273; border-radius: 10px; background: #16243a; color: #cbd9ed; font-size: 12px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.correct-customer-email-button:hover { border-color: #4f8cff; background: #203353; color: #fff; }
 .conversation-avatar { display: grid; width: 43px; height: 43px; flex: 0 0 43px; place-items: center; border-radius: 13px; background: linear-gradient(135deg, #4f8cff, #7769e8); color: #fff; font-weight: 800; }
 #conversationTitle { padding: 0; border: 0; background: none; font-size: 19px; }
 
@@ -2572,6 +2575,8 @@ a:focus-visible {
     .support-conversation time { font-size: 11px; }
     .support-chevron { display: none; }
     .conversation-toolbar, .conversation-customer { padding-right: 15px; padding-left: 15px; }
+    .conversation-customer { align-items: flex-start; flex-wrap: wrap; }
+    .correct-customer-email-button { width: 100%; margin-left: 56px; }
     #conversationMessages { min-height: 350px; padding: 18px 14px; }
     .support-message-bubble, .admin-message-bubble { max-width: 88%; }
     #conversationReplyForm { align-items: stretch; flex-direction: column; padding: 12px; }

@@ -3949,7 +3949,100 @@ async function loadAdminConversation(
     }
 
 }
- 
+
+function setupCustomerEmailCorrection() {
+    const button =
+        document.getElementById("correctCustomerEmail");
+
+    if (!button || button.dataset.ready === "true") {
+        return;
+    }
+
+    button.dataset.ready = "true";
+
+    button.addEventListener("click", async () => {
+        const conversationId =
+            getActiveAdminConversationId();
+
+        const currentEmail =
+            getActiveAdminConversationEmail();
+
+        if (!conversationId) {
+            alert("Open the customer conversation again before correcting the email.");
+            return;
+        }
+
+        const enteredEmail = prompt(
+            "Enter the customer's correct email address:",
+            /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(currentEmail)
+                ? currentEmail
+                : ""
+        );
+
+        if (enteredEmail === null) {
+            return;
+        }
+
+        const newEmail =
+            String(enteredEmail).trim().toLowerCase();
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+            alert("Please enter a valid email address.");
+            return;
+        }
+
+        if (!confirm(`Change this conversation's email to ${newEmail}?`)) {
+            return;
+        }
+
+        button.disabled = true;
+        button.textContent = "Updating…";
+
+        try {
+            const response = await fetch(
+                "/admin/conversations/update-email",
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        conversationId,
+                        email: newEmail
+                    })
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(
+                    data.message || "Unable to correct the customer email."
+                );
+            }
+
+            setActiveAdminConversation(
+                newEmail,
+                Number(data.conversationId) || conversationId
+            );
+
+            await loadAdminConversation(
+                newEmail,
+                Number(data.conversationId) || conversationId
+            );
+
+            alert(
+                data.merged
+                    ? "Email corrected. The customer's conversations were combined."
+                    : "Customer email corrected successfully."
+            );
+        } catch (error) {
+            alert(error.message || "Unable to correct the customer email.");
+        } finally {
+            button.disabled = false;
+            button.textContent = "Correct email";
+        }
+    });
+}
+
 // ========================================
 // BACK TO CONVERSATIONS
 // ========================================
@@ -5079,6 +5172,8 @@ document.addEventListener(
         setupDashboardNavigation();
 
         setupAdminReplyForm();
+
+        setupCustomerEmailCorrection();
 
         setupAdminAccountSettings();
 

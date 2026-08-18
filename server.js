@@ -885,6 +885,119 @@ function deleteEntireConversation(customerEmail, callback) {
     );
 }
 
+function correctConversationEmail(conversationId, newEmail, callback) {
+    db.beginTransaction(transactionErr => {
+        if (transactionErr) {
+            return callback(transactionErr);
+        }
+
+        const rollback = error => {
+            db.rollback(() => callback(error));
+        };
+
+        db.query(
+            "SELECT id, customer_email FROM conversations WHERE id = ? LIMIT 1 FOR UPDATE",
+            [conversationId],
+            (sourceErr, sourceRows) => {
+                if (sourceErr) return rollback(sourceErr);
+                if (!sourceRows.length) {
+                    const error = new Error("Conversation not found.");
+                    error.code = "CONVERSATION_NOT_FOUND";
+                    return rollback(error);
+                }
+
+                const source = sourceRows[0];
+
+                if (
+                    String(source.customer_email).trim().toLowerCase() === newEmail
+                ) {
+                    return db.commit(commitErr => {
+                        if (commitErr) return rollback(commitErr);
+                        callback(null, {
+                            conversationId,
+                            merged: false
+                        });
+                    });
+                }
+
+                db.query(
+                    "SELECT id FROM conversations WHERE customer_email = ? AND id <> ? LIMIT 1 FOR UPDATE",
+                    [newEmail, conversationId],
+                    (targetErr, targetRows) => {
+                        if (targetErr) return rollback(targetErr);
+
+                        const targetId =
+                            targetRows.length ? Number(targetRows[0].id) : null;
+
+                        const cleanupAndCommit = (finalConversationId, merged) => {
+                            db.query(
+                                "DELETE FROM customer_presence WHERE customer_email = ?",
+                                [source.customer_email],
+                                presenceErr => {
+                                    if (presenceErr) return rollback(presenceErr);
+
+                                    db.query(
+                                        "DELETE FROM presence_sessions WHERE principal_type = 'customer' AND principal_id = ?",
+                                        [source.customer_email],
+                                        sessionErr => {
+                                            if (sessionErr) return rollback(sessionErr);
+
+                                            db.commit(commitErr => {
+                                                if (commitErr) return rollback(commitErr);
+
+                                                callback(null, {
+                                                    conversationId: finalConversationId,
+                                                    merged
+                                                });
+                                            });
+                                        }
+                                    );
+                                }
+                            );
+                        };
+
+                        if (!targetId) {
+                            return db.query(
+                                "UPDATE conversations SET customer_email = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                [newEmail, conversationId],
+                                updateErr => {
+                                    if (updateErr) return rollback(updateErr);
+                                    cleanupAndCommit(conversationId, false);
+                                }
+                            );
+                        }
+
+                        db.query(
+                            "UPDATE conversation_messages SET conversation_id = ? WHERE conversation_id = ?",
+                            [targetId, conversationId],
+                            moveErr => {
+                                if (moveErr) return rollback(moveErr);
+
+                                db.query(
+                                    "UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                    [targetId],
+                                    targetUpdateErr => {
+                                        if (targetUpdateErr) return rollback(targetUpdateErr);
+
+                                        db.query(
+                                            "DELETE FROM conversations WHERE id = ?",
+                                            [conversationId],
+                                            deleteErr => {
+                                                if (deleteErr) return rollback(deleteErr);
+                                                cleanupAndCommit(targetId, true);
+                                            }
+                                        );
+                                    }
+                                );
+                            }
+                        );
+                    }
+                );
+            }
+        );
+    });
+}
+
 // ========================================
 // CUSTOMER ONLINE
 // ========================================
@@ -1227,6 +1340,7 @@ function isAdminApiRoute(req, urlPath) {
             urlPath === "/admin-account/update" ||
             urlPath === "/admin/messages/delete" ||
             urlPath === "/admin/conversations/delete" ||
+            urlPath === "/admin/conversations/update-email" ||
             urlPath === "/presence/admin/heartbeat" ||
             urlPath === "/presence/admin/disconnect"
         )
@@ -2763,6 +2877,69 @@ Message: ${message}
                         }
 
                         sendJSON(res, 200, { success: true });
+                    }
+                );
+            });
+        }
+
+        if (
+            req.method === "POST" &&
+            urlPath === "/admin/conversations/update-email"
+        ) {
+            return readRequestBody(req, body => {
+                let data;
+
+                try {
+                    data = JSON.parse(body);
+                } catch {
+                    return sendJSON(res, 400, {
+                        success: false,
+                        message: "Invalid email correction request."
+                    });
+                }
+
+                const conversationId = Number(data.conversationId);
+                const email = String(data.email || "").trim().toLowerCase();
+
+                if (
+                    !Number.isSafeInteger(conversationId) ||
+                    conversationId < 1 ||
+                    !isValidEmail(email)
+                ) {
+                    return sendJSON(res, 400, {
+                        success: false,
+                        message: "A valid conversation and email address are required."
+                    });
+                }
+
+                correctConversationEmail(
+                    conversationId,
+                    email,
+                    (correctionErr, result) => {
+                        if (correctionErr) {
+                            if (correctionErr.code === "CONVERSATION_NOT_FOUND") {
+                                return sendJSON(res, 404, {
+                                    success: false,
+                                    message: correctionErr.message
+                                });
+                            }
+
+                            console.error(
+                                "Customer email correction error:",
+                                correctionErr
+                            );
+
+                            return sendJSON(res, 500, {
+                                success: false,
+                                message: "Unable to correct the customer email."
+                            });
+                        }
+
+                        sendJSON(res, 200, {
+                            success: true,
+                            conversationId: result.conversationId,
+                            merged: result.merged
+                        });
                     }
                 );
             });
