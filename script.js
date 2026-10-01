@@ -369,7 +369,10 @@ function setupLanguageSelector() {
 "Please enter a valid email address, for example name@example.com.": "Por favor, introduce una dirección de correo electrónico válida, por ejemplo nombre@ejemplo.com.",
 "Copy": "Copiar",
 "Paste into reply": "Pegar en la respuesta",
-"Delete": "Eliminar"
+"Delete": "Eliminar",
+"This photo could not be opened. If it is stored in the cloud, open it in your gallery first, or take a new photo.": "Esta foto no se pudo abrir. Si está guardada en la nube, ábrela primero en tu galería o toma una foto nueva.",
+"This photo format is not supported. Please choose a JPG, PNG, or WEBP photo.": "Este formato de foto no es compatible. Elige una foto JPG, PNG o WEBP.",
+"This photo is too large. Please choose a smaller one (up to 5 MB).": "Esta foto es demasiado grande. Elige una más pequeña (hasta 5 MB).",
         },
 
         fr: {
@@ -484,7 +487,10 @@ function setupLanguageSelector() {
 "Please enter a valid email address, for example name@example.com.": "Veuillez saisir une adresse e-mail valide, par exemple nom@exemple.com.",
 "Copy": "Copier",
 "Paste into reply": "Coller dans la réponse",
-"Delete": "Supprimer"
+"Delete": "Supprimer",
+"This photo could not be opened. If it is stored in the cloud, open it in your gallery first, or take a new photo.": "Impossible d'ouvrir cette photo. Si elle est stockée dans le cloud, ouvrez-la d'abord dans votre galerie, ou prenez une nouvelle photo.",
+"This photo format is not supported. Please choose a JPG, PNG, or WEBP photo.": "Ce format de photo n'est pas pris en charge. Choisissez une photo JPG, PNG ou WEBP.",
+"This photo is too large. Please choose a smaller one (up to 5 MB).": "Cette photo est trop volumineuse. Choisissez-en une plus petite (5 Mo maximum).",
         },
 
         de: {
@@ -642,7 +648,10 @@ function setupLanguageSelector() {
 "Please enter a valid email address, for example name@example.com.": "Bitte geben Sie eine gültige E-Mail-Adresse ein, zum Beispiel name@beispiel.de.",
 "Copy": "Kopieren",
 "Paste into reply": "In Antwort einfügen",
-"Delete": "Löschen"
+"Delete": "Löschen",
+"This photo could not be opened. If it is stored in the cloud, open it in your gallery first, or take a new photo.": "Dieses Foto konnte nicht geöffnet werden. Wenn es in der Cloud gespeichert ist, öffne es zuerst in deiner Galerie oder nimm ein neues Foto auf.",
+"This photo format is not supported. Please choose a JPG, PNG, or WEBP photo.": "Dieses Fotoformat wird nicht unterstützt. Bitte wähle ein JPG-, PNG- oder WEBP-Foto.",
+"This photo is too large. Please choose a smaller one (up to 5 MB).": "Dieses Foto ist zu groß. Bitte wähle ein kleineres (bis zu 5 MB).",
 },            
 
         zh: {
@@ -757,7 +766,10 @@ function setupLanguageSelector() {
 "Please enter a valid email address, for example name@example.com.": "请输入有效的电子邮箱地址，例如 name@example.com。",
 "Copy": "复制",
 "Paste into reply": "粘贴到回复中",
-"Delete": "删除"
+"Delete": "删除",
+"This photo could not be opened. If it is stored in the cloud, open it in your gallery first, or take a new photo.": "无法打开这张照片。如果它保存在云端，请先在相册中打开，或重新拍一张照片。",
+"This photo format is not supported. Please choose a JPG, PNG, or WEBP photo.": "不支持此照片格式。请选择 JPG、PNG 或 WEBP 照片。",
+"This photo is too large. Please choose a smaller one (up to 5 MB).": "这张照片太大。请选择较小的照片（最大 5 MB）。",
         },
 
         ja: {
@@ -875,6 +887,9 @@ function setupLanguageSelector() {
 "Delete": "削除",
 "Searching for your parcel...":
     "荷物を検索しています...",
+"This photo could not be opened. If it is stored in the cloud, open it in your gallery first, or take a new photo.": "この写真を開けませんでした。クラウドに保存されている場合は、先にギャラリーで開くか、新しく写真を撮ってください。",
+"This photo format is not supported. Please choose a JPG, PNG, or WEBP photo.": "この写真の形式には対応していません。JPG、PNG、WEBP の写真を選んでください。",
+"This photo is too large. Please choose a smaller one (up to 5 MB).": "この写真は大きすぎます。もっと小さい写真（5 MB まで）を選んでください。",
         },
 
         ar: {
@@ -989,7 +1004,10 @@ function setupLanguageSelector() {
 "Please enter a valid email address, for example name@example.com.": "يرجى إدخال عنوان بريد إلكتروني صالح، مثل name@example.com.",
 "Copy": "نسخ",
 "Paste into reply": "لصق في الرد",
-"Delete": "حذف"
+"Delete": "حذف",
+"This photo could not be opened. If it is stored in the cloud, open it in your gallery first, or take a new photo.": "تعذّر فتح هذه الصورة. إذا كانت محفوظة في السحابة، افتحها أولًا في معرض الصور أو التقط صورة جديدة.",
+"This photo format is not supported. Please choose a JPG, PNG, or WEBP photo.": "تنسيق هذه الصورة غير مدعوم. يُرجى اختيار صورة بتنسيق JPG أو PNG أو WEBP.",
+"This photo is too large. Please choose a smaller one (up to 5 MB).": "هذه الصورة كبيرة جدًا. يُرجى اختيار صورة أصغر (حتى 5 ميغابايت).",
         }
     };
 
@@ -4494,6 +4512,17 @@ window.logout =
 
 const selectedImages = { customer: null, admin: null };
 const MAX_CLIENT_IMAGE_BYTES = 5 * 1024 * 1024;
+// Photos are shrunk before sending: the longest side becomes at most this
+// many pixels, saved as JPEG. A 12 MB phone photo becomes a few hundred KB.
+const MAX_IMAGE_DIMENSION = 1600;
+const IMAGE_JPEG_QUALITY = 0.85;
+const SERVER_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const IMAGE_UNREADABLE_MESSAGE =
+    "This photo could not be opened. If it is stored in the cloud, open it in your gallery first, or take a new photo.";
+const IMAGE_FORMAT_MESSAGE =
+    "This photo format is not supported. Please choose a JPG, PNG, or WEBP photo.";
+const IMAGE_TOO_LARGE_MESSAGE =
+    "This photo is too large. Please choose a smaller one (up to 5 MB).";
 
 function setupImageAttachment(kind) {
     const input = document.getElementById(`${kind}ImageInput`);
@@ -4501,45 +4530,119 @@ function setupImageAttachment(kind) {
     const preview = document.getElementById(`${kind}ImagePreview`);
     if (!input || !button || !preview || input.dataset.ready) return;
     input.dataset.ready = "true";
+    // Customers see these messages in their own language; the admin side
+    // stays in English.
+    const translate = kind === "customer" ? getCustomerTranslation : message => message;
     const clear = () => {
+        const current = selectedImages[kind];
+        if (current && current.previewUrl) URL.revokeObjectURL(current.previewUrl);
         selectedImages[kind] = null;
         input.value = "";
         preview.hidden = true;
         preview.querySelector("img").removeAttribute("src");
     };
     button.addEventListener("click", () => input.click());
-    input.addEventListener("change", () => {
+    input.addEventListener("change", async () => {
         const file = input.files && input.files[0];
         if (!file) return clear();
-        if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > MAX_CLIENT_IMAGE_BYTES) {
-            alert("Choose a JPG, PNG, or WEBP image up to 5 MB.");
+        // Read the photo NOW, not when Send is pressed. On Android, a photo
+        // picked from the gallery, Google Photos or WhatsApp can stop being
+        // readable moments after it is chosen -- reading it later is what
+        // failed with "Unable to read selected image".
+        let prepared;
+        try {
+            prepared = await prepareImageForUpload(file);
+        } catch (error) {
+            alert(translate(error.message || IMAGE_UNREADABLE_MESSAGE));
             return clear();
         }
-        selectedImages[kind] = file;
-        preview.querySelector("img").src = URL.createObjectURL(file);
-        preview.querySelector(".attachment-preview-name").textContent = file.name;
+        clear();
+        selectedImages[kind] = prepared;
+        preview.querySelector("img").src = prepared.previewUrl;
+        preview.querySelector(".attachment-preview-name").textContent = prepared.name;
         preview.hidden = false;
     });
     preview.querySelector(".attachment-remove").addEventListener("click", clear);
 }
 
-function imageFileToBase64(file) {
+// Decodes the photo, shrinks it and keeps an in-memory JPEG copy, so sending
+// never has to touch the original file again. Returns
+// { name, base64, previewUrl }.
+async function prepareImageForUpload(file) {
+    if (file.type && !file.type.startsWith("image/")) throw new Error(IMAGE_FORMAT_MESSAGE);
+    let blob = null;
+    try {
+        blob = await shrinkImage(file);
+    } catch (error) {
+        blob = null;
+    }
+    if (!blob) {
+        // The browser could not decode it (some HEIC photos, for example):
+        // send the original only if the server accepts that format.
+        if (!SERVER_IMAGE_TYPES.includes(file.type)) throw new Error(IMAGE_FORMAT_MESSAGE);
+        blob = file;
+    }
+    if (blob.size > MAX_CLIENT_IMAGE_BYTES) throw new Error(IMAGE_TOO_LARGE_MESSAGE);
+    const base64 = await blobToBase64(blob);
+    const baseName = String(file.name || "photo").replace(/\.[^.]*$/, "") || "photo";
+    const name = blob === file ? String(file.name || "photo") : baseName + ".jpg";
+    return { name, base64, previewUrl: URL.createObjectURL(blob) };
+}
+
+function loadImageElement(blob) {
     return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result).split(",")[1]);
-        reader.onerror = () => reject(new Error("Unable to read selected image."));
-        reader.readAsDataURL(file);
+        const url = URL.createObjectURL(blob);
+        const image = new Image();
+        image.onload = () => resolve({ image, url });
+        image.onerror = () => {
+            URL.revokeObjectURL(url);
+            reject(new Error(IMAGE_UNREADABLE_MESSAGE));
+        };
+        image.src = url;
     });
 }
 
-async function sendConversationImage(sender, email, name, message, file, conversationId = null) {
+async function shrinkImage(file) {
+    const { image, url } = await loadImageElement(file);
+    try {
+        const longest = Math.max(image.naturalWidth, image.naturalHeight);
+        if (!longest) return null;
+        const scale = Math.min(1, MAX_IMAGE_DIMENSION / longest);
+        const width = Math.max(1, Math.round(image.naturalWidth * scale));
+        const height = Math.max(1, Math.round(image.naturalHeight * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d");
+        if (!context) return null;
+        // JPEG has no transparency: give transparent PNGs a white background.
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, width, height);
+        context.drawImage(image, 0, 0, width, height);
+        return await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", IMAGE_JPEG_QUALITY));
+    } finally {
+        URL.revokeObjectURL(url);
+    }
+}
+
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(",")[1]);
+        reader.onerror = () => reject(new Error(IMAGE_UNREADABLE_MESSAGE));
+        reader.readAsDataURL(blob);
+    });
+}
+
+// `image` is what prepareImageForUpload returned when the photo was picked.
+async function sendConversationImage(sender, email, name, message, image, conversationId = null) {
     const body = {
         sender,
         email,
         name,
         message: String(message || "").trim(),
-        imageName: file.name,
-        imageData: await imageFileToBase64(file)
+        imageName: image.name,
+        imageData: image.base64
     };
        if (sender === "admin") {
     const auth = getAdminAuthData();
@@ -4723,6 +4826,7 @@ function setupChatForm() {
                 const ready = await requestCustomerInformation();
                 if (!ready) return;
                 await sendConversationImage("customer", customerEmail, customerName, message, image);
+                if (selectedImages.customer && selectedImages.customer.previewUrl) URL.revokeObjectURL(selectedImages.customer.previewUrl);
                 selectedImages.customer = null;
                 document.getElementById("customerImageInput").value = "";
                 document.getElementById("customerImagePreview").hidden = true;
@@ -4811,6 +4915,7 @@ function setupAdminReplyForm() {
                     activeConversationId
                 );
 
+                if (selectedImages.admin && selectedImages.admin.previewUrl) URL.revokeObjectURL(selectedImages.admin.previewUrl);
                 selectedImages.admin = null;
 
                 const imageInput =

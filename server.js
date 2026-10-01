@@ -8,7 +8,12 @@ require("dotenv").config();
 const mysql = require("mysql2");
 
 const messagesFile = path.join(__dirname, "messages.txt");
-const uploadsDirectory = path.join(__dirname, "uploads");
+// Where uploaded chat photos are stored. On Railway the app's own disk is
+// wiped on every deploy, so point UPLOADS_DIR at a mounted volume (for
+// example /data/uploads) to keep photos. Defaults to ./uploads.
+const uploadsDirectory = process.env.UPLOADS_DIR
+    ? path.resolve(process.env.UPLOADS_DIR)
+    : path.join(__dirname, "uploads");
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const PRESENCE_TIMEOUT_SECONDS = 75;
 const PORT = Number(process.env.PORT) || 3000;
@@ -4299,6 +4304,28 @@ if (
         // ========================================
         // SERVE WEBSITE FILES
         // ========================================
+
+        // Uploaded chat photos are served from uploadsDirectory, which may be
+        // a Railway volume outside the app folder. Only a bare file name with
+        // an image extension is accepted.
+        if (urlPath.startsWith("/uploads/")) {
+            const fileName = urlPath.slice("/uploads/".length);
+            const uploadTypes = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp" };
+            const uploadType = uploadTypes[path.extname(fileName).toLowerCase()];
+            if (!uploadType || fileName !== path.basename(fileName) || fileName.startsWith(".")) {
+                res.writeHead(404, { "Content-Type": "text/plain" });
+                return res.end("File not found");
+            }
+            return fs.readFile(path.join(uploadsDirectory, fileName), (err, content) => {
+                if (err) {
+                    console.error("Upload not found:", fileName);
+                    res.writeHead(404, { "Content-Type": "text/plain" });
+                    return res.end("File not found");
+                }
+                res.writeHead(200, { "Content-Type": uploadType, "X-Content-Type-Options": "nosniff" });
+                res.end(content);
+            });
+        }
 
         const requestedFile = urlPath === "/" ? "/index.html" : urlPath;
         const filePath = path.resolve(__dirname, "." + requestedFile);
